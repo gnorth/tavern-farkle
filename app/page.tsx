@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useReducer, useRef, useState } from 'react';
-import { Dices, BookOpen, RotateCcw, Shield, Crown, ArrowRight, Check, X } from 'lucide-react';
+import { Dice1, Dice2, Dice3, Dice4, Dice5, Dice6, Dices, BookOpen, RotateCcw, Shield, Crown, ArrowRight, Check, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog';
 import DiceTable from '@/components/dice-table';
 import { gameReducer, initialGame, scoreDice, selectionBreakdown, bestSelection, playerName, type Mode, type Game } from '@/lib/game';
@@ -57,7 +57,21 @@ export default function Home(){
  </nav>
  {game.result&&game.phase==='won'&&<TurnSummary key={`${game.rollId}-${game.phase}`} game={game} nextName={nextName} onNext={()=>dispatch({type:'next'})} onRestart={()=>dispatch({type:'new',mode:game.mode})}/>}
  <Dialog open={menu} onOpenChange={setMenu}><DialogContent className="game-dialog" showCloseButton={false}><DialogClose className="dialog-close" aria-label="Закрити меню"><X size={20}/></DialogClose><DialogTitle className="dialog-title">Корчма</DialogTitle><DialogDescription>Нова партія до 4 000 очок</DialogDescription><div className="menu-options"><button className="primary" onClick={()=>{setMenu(false);requestNew('bot');}}><Crown size={20}/> Проти корчмаря</button><button className="primary" onClick={()=>{setMenu(false);requestNew('hotseat');}}><Shield size={20}/> Удвох на одному пристрої</button><DialogClose className="secondary">Повернутися до гри</DialogClose></div></DialogContent></Dialog>
- <Dialog open={rules} onOpenChange={setRules}><DialogContent className="game-dialog" showCloseButton={false}><DialogClose className="dialog-close" aria-label="Закрити правила"><X size={20}/></DialogClose><DialogTitle className="dialog-title">Правила корчми</DialogTitle><DialogDescription>Перший, хто набере 4 000 очок, перемагає.</DialogDescription><div className="rules-body"><p>Киньте шість кубиків. Виберіть хоча б одну залікову комбінацію, а потім заберіть очки або киньте решту кубиків ще раз.</p><div className="rule-row"><span>Одна 1 / одна 5</span><b>100 / 50</b></div><div className="rule-row"><span>Три 1</span><b>1 000</b></div><div className="rule-row"><span>Три 2, 3, 4, 5 або 6</span><b>200–600</b></div><div className="rule-row"><span>Кожен наступний однаковий</span><b>подвоює комбінацію</b></div><div className="rule-row"><span>1–2–3–4–5</span><b>500</b></div><div className="rule-row"><span>2–3–4–5–6</span><b>750</b></div><div className="rule-row"><span>1–2–3–4–5–6</span><b>1 500</b></div><p><b>Невдалий кидок:</b> якщо жоден кубик не дає очок, усі незабрані очки цього ходу згорають. Загальний рахунок залишається.</p><p><b>Усі шість залікові?</b> Можна знову кинути всі шість і продовжити накопичувати очки.</p><p>Комбінації складаються тільки з одного кидка. Відкладені кубики не можна додати до нової комбінації.</p><DialogClose className="primary">До столу</DialogClose></div></DialogContent></Dialog>
+ <Dialog open={rules} onOpenChange={setRules}><DialogContent className="game-dialog tavern-rules" showCloseButton={false}>
+ <DialogClose className="dialog-close" aria-label="Закрити правила"><X size={20}/></DialogClose>
+ <div className="rules-heading"><div className="rules-seal" aria-hidden="true"><Dices size={28}/></div><div><DialogTitle className="dialog-title">Правила корчми</DialogTitle><DialogDescription>Наберіть 4 000 очок, щоб перемогти.</DialogDescription></div></div>
+ <div className="rules-body"><p className="rules-intro">Киньте кубики, виберіть залікові комбінації. Заберіть очки або ризикніть і киньте решту ще раз.</p>
+ <h3 className="rules-section-title">Окремі кубики</h3>
+ <div className="rules-combos"><RuleCombo dice={[1]} label="Одиниця" points="100"/><RuleCombo dice={[5]} label="П’ятірка" points="50"/></div>
+ <h3 className="rules-section-title">Три однакові</h3>
+ <div className="rules-combos">{[1,2,3,4,5,6].map(v=><RuleCombo key={v} dice={[v,v,v]} label={`Три кубики зі значенням ${v}`} points={number(v===1?1000:v*100)}/>)}</div>
+ <div className="rules-multiplier"><span className="rules-times">×2</span><div><b>Ще один такий самий — удвічі більше</b><p>Наприклад: три п’ятірки — 500, чотири — 1 000, п’ять — 2 000 очок.</p></div></div>
+ <h3 className="rules-section-title">Послідовності</h3>
+ <div className="rules-combos"><RuleCombo dice={[1,2,3,4,5]} label="Від одного до п’яти" points="500"/><RuleCombo dice={[2,3,4,5,6]} label="Від двох до шести" points="750"/><RuleCombo dice={[1,2,3,4,5,6]} label="Повна послідовність" points="1 500"/></div>
+ <div className="rules-tip rules-risk"><b>Невдалий кидок</b><p>Жодної залікової комбінації? Незабрані очки цього ходу згорають. Загальний рахунок залишається.</p></div>
+ <div className="rules-tip"><b>Усі шість кубиків залікові?</b><p>Кидайте всі шість знову й продовжуйте накопичувати очки.</p></div>
+ <p className="rules-footnote">Комбінації складаються лише з одного кидка. Відкладені кубики не додаються до нової комбінації.</p>
+ <DialogClose className="primary rules-return">До столу <ArrowRight size={17}/></DialogClose></div></DialogContent></Dialog>
  <Dialog open={newMode!==null} onOpenChange={open=>{if(!open)setNewMode(null);}}><DialogContent className="game-dialog" showCloseButton={false}><DialogTitle className="dialog-title">Почати нову партію?</DialogTitle><DialogDescription>Поточний рахунок буде скинуто. Режим: {newMode==='bot'?'проти корчмаря':'удвох на одному пристрої'}.</DialogDescription><div className="dialog-actions"><button className="secondary" onClick={()=>setNewMode(null)}>Продовжити гру</button><button className="primary" onClick={()=>{dispatch({type:'new',mode:newMode!});setNewMode(null);}}>Нова партія</button></div></DialogContent></Dialog>
  </main>
 }
@@ -86,4 +100,9 @@ function TurnSummary({game,nextName,onNext,onRestart}:{game:Game;nextName:string
  <div className="result-total"><span>Загальний рахунок</span><div>{number(result.before)} <ArrowRight size={20}/><strong><CountUp from={result.before} to={result.after}/></strong></div></div>
  <div className="result-footer">{won?<button className="primary" disabled={!ready} onClick={onRestart}>Зіграти ще раз</button>:<><p>Далі: {nextName}</p><button className="primary" disabled={!ready} onClick={onNext}>{game.mode==='hotseat'?'Передати хід':'Продовжити'} <ArrowRight size={18}/></button></>}</div>
  </section></div>;
+}
+
+function RuleCombo({dice,label,points}:{dice:number[];label:string;points:string}){
+ const icons=[Dice1,Dice2,Dice3,Dice4,Dice5,Dice6];
+ return <div className="rule-combo" aria-label={`${label}: ${points} очок`}><div className="rule-dice" aria-hidden="true">{dice.map((value,i)=>{const Icon=icons[value-1];return <Icon key={i} className={`rule-die ${value===1?'rule-die-one':''}`} strokeWidth={1.7}/>;})}</div><span className="rule-points">{points}<small>очок</small></span></div>;
 }
