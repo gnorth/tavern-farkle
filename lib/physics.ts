@@ -36,7 +36,7 @@ export function diceShape(){
 }
 export function createWorld(){const world=new CANNON.World({gravity:new CANNON.Vec3(0,-60,0),allowSleep:true});(world.solver as CANNON.GSSolver).iterations=20;
  world.addContactMaterial(new CANNON.ContactMaterial(woodMaterial,boneMaterial,{friction:.50,restitution:.035,contactEquationStiffness:1e7,contactEquationRelaxation:4}));
- world.addContactMaterial(new CANNON.ContactMaterial(boneMaterial,boneMaterial,{friction:.12,restitution:.10,contactEquationStiffness:1e7,contactEquationRelaxation:4}));
+ world.addContactMaterial(new CANNON.ContactMaterial(boneMaterial,boneMaterial,{friction:0,restitution:.12,contactEquationStiffness:1e7,contactEquationRelaxation:4}));
  for(const [w,h,d,x,y,z] of [[13,.45,9,0,-.225,0],[.35,10,9,-6.3,5,0],[.35,10,9,6.3,5,0],[13,10,.35,0,5,4.35],[13,10,.35,0,5,-4.35]]){const b=new CANNON.Body({mass:0,material:woodMaterial,shape:new CANNON.Box(new CANNON.Vec3(w/2,h/2,d/2))});b.position.set(x,y,z);world.addBody(b);}
  // A heavy first impact dissipates the throw's forward energy on the wood.
  world.addEventListener('postStep',()=>{for(const contact of world.contacts){
@@ -71,7 +71,7 @@ export function nudgeTilted(b:CANNON.Body){
  let angle=attempt*2.399963+b.position.x;
  // Push away from the closest die supporting this one, instead of back into it.
  const neighbor=b.world?.bodies.filter(other=>other!==b&&other.shapes[0] instanceof CANNON.ConvexPolyhedron&&other.position.distanceTo(b.position)<1.65).sort((a,c)=>a.position.distanceTo(b.position)-c.position.distanceTo(b.position))[0];
- if(neighbor){const dx=b.position.x-neighbor.position.x,dz=b.position.z-neighbor.position.z;if(Math.hypot(dx,dz)>.05)angle=Math.atan2(dz,dx);}
+ if(neighbor){const dx=b.position.x-neighbor.position.x,dz=b.position.z-neighbor.position.z;if(Math.hypot(dx,dz)>.05)angle=Math.atan2(dz,dx)+Math.sin(attempt*2.399963)*.35;}
  if(Math.abs(b.position.x)>3||Math.abs(b.position.z)>2.5)angle=Math.atan2(-b.position.z,-b.position.x);
  const strength=1+Math.min(attempt,3)*.2;
  b.wakeUp();b.applyImpulse(new CANNON.Vec3(Math.cos(angle)*2.6*strength,4.4,Math.sin(angle)*2.6*strength).scale(b.mass),new CANNON.Vec3(Math.cos(angle+.8)*.24,0,Math.sin(angle+.8)*.24));
