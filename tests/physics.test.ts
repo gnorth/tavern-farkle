@@ -1,11 +1,13 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import * as CANNON from 'cannon-es';
-import {createWorld,createDie,launchDie,nudgeTilted,upperFace,normals,faceValues} from '../lib/physics.ts';
+import {createWorld,createDie,launchDie,nudgeTilted,upperFace,normals,faceValues,PHYSICS_STEP} from '../lib/physics.ts';
 test('top-face detection agrees with all six rendered materials',()=>{normals.forEach((n,i)=>{const q=new CANNON.Quaternion();q.setFromVectors(n,new CANNON.Vec3(0,1,0));assert.equal(upperFace(q).value,faceValues[i]);assert.ok(upperFace(q).alignment>.999);});});
 test('100 seeded six-die throws settle on flat faces within tray',()=>{let seed=7193;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/2**32;};let longest=0;
  for(let run=0;run<100;run++){const world=createWorld();const dice=Array.from({length:6},()=>createDie(world));dice.forEach((b,i)=>launchDie(b,i,random));let settled=false;
- for(let step=0;step<1800;step++){world.step(1/60);if(step>40&&dice.every(b=>b.sleepState===CANNON.Body.SLEEPING&&upperFace(b.quaternion).alignment>.985)){settled=true;longest=Math.max(longest,step/60);break;}if(step>0&&step%150===0)dice.forEach(nudgeTilted);}
+ for(let step=0;step<3600;step++){world.step(PHYSICS_STEP);if(step>40&&dice.every(b=>b.sleepState===CANNON.Body.SLEEPING&&upperFace(b.quaternion).alignment>.985)){settled=true;longest=Math.max(longest,step*PHYSICS_STEP);break;}if(step>0&&step%300===0)dice.forEach(nudgeTilted);}
  assert.ok(settled,`throw ${run} failed to settle`);dice.forEach(b=>{assert.ok(Math.abs(b.position.x)<6.3&&Math.abs(b.position.z)<4.35);assert.ok(upperFace(b.quaternion).value>=1&&upperFace(b.quaternion).value<=6);});}
  console.log(`100 physics throws settled; longest ${longest.toFixed(2)}s`);
 });
+test('all reroll sizes settle alongside held dice',()=>{let seed=8041;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/2**32;};for(let count=1;count<=5;count++)for(let run=0;run<20;run++){const world=createWorld();const dice=Array.from({length:6},()=>createDie(world));dice.forEach((b,i)=>{if(i<count)launchDie(b,i,random);else{b.type=CANNON.Body.STATIC;b.position.set((i-2.5)*1.45,.52,-3.35);b.updateMassProperties();}});let settled=false;for(let step=0;step<3600;step++){world.step(PHYSICS_STEP);if(step>80&&dice.slice(0,count).every(b=>b.sleepState===CANNON.Body.SLEEPING&&upperFace(b.quaternion).alignment>.985)){settled=true;break;}if(step>0&&step%300===0)dice.slice(0,count).forEach(nudgeTilted);}assert.ok(settled,`reroll ${count} / ${run}`);dice.slice(count).forEach((b,j)=>assert.equal(b.position.x,(count+j-2.5)*1.45));}});
+test('cocked-die recovery applies an impulse without teleporting',()=>{const world=createWorld();const b=createDie(world);b.position.set(0,.6,0);b.quaternion.setFromEuler(0,0,Math.PI/4);b.sleep();const before=b.position.clone();nudgeTilted(b);assert.deepEqual(b.position,before);assert.ok(b.velocity.length()>0);});
