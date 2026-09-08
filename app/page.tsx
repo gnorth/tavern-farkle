@@ -26,7 +26,7 @@ export default function Home(){
    if(!game.selected.length)fn=()=>dispatch({type:'select',ids:bestSelection(game.dice,game.locked).ids});
    else{const total=game.pot+selectedScore;const remaining=6-game.locked.length-game.selected.length;const winning=game.scores[1]+total>=4000;const stop=winning||total>=700||(remaining<=2&&remaining>0&&total>=300);fn=()=>dispatch({type:stop?'bank':'roll'});}
   }
-  if(fn){const id=setTimeout(fn,game.phase==='bust'?2400:game.phase==='handoff'?1600:1100);return ()=>clearTimeout(id);}
+  if(fn){const id=setTimeout(fn,game.phase==='bust'||game.phase==='handoff'?4500:1100);return ()=>clearTimeout(id);}
  },[game,isBot,selectedScore,rules,newMode,menu]);
  // Optional browser-agent readback uses exactly the same game state.
  useEffect(()=>{
@@ -42,17 +42,42 @@ export default function Home(){
  return <main className="game-screen">
  <DiceTable game={game} interactive={canChoose&&!rules&&!menu&&!newMode} onSelect={id=>dispatch({type:'toggle',id})} onResult={(values,rollId)=>dispatch({type:'rolled',values,rollId})}/>
  <PlayerScore game={game} p={1}/><PlayerScore game={game} p={0}/>
- <div className="game-status" role="status">{game.phase==='rolling'?'Кубики котяться…':isBot&&game.phase!=='won'?'Хід корчмаря':game.phase==='choose'?(selectedInvalid?'Ця комбінація не дає очок':game.selected.length?'':'Виберіть кубики'):game.phase==='ready'?`Хід: ${playerName(game)}`:game.phase==='handoff'?game.message:''}</div>
+ <div className="game-status" role="status">{game.phase==='rolling'?'Кубики котяться…':isBot&&!game.result?'Хід корчмаря':game.phase==='choose'?(selectedInvalid?'Ця комбінація не дає очок':game.selected.length?'':'Виберіть кубики'):game.phase==='ready'?`Хід: ${playerName(game)}`:''}</div>
  <nav className="game-actions" aria-label="Дії гри">
  <button className="utility" onClick={()=>setRules(true)}><BookOpen size={16}/> Правила</button>
  {game.phase==='ready'&&!isBot&&<button className="main-action" onClick={()=>dispatch({type:'roll'})}><Dices size={19}/> Кинути кубики</button>}
  {game.phase==='choose'&&!isBot&&<><button disabled={!selectedScore} onClick={()=>dispatch({type:'roll'})}><Dices size={18}/>{game.selected.length+game.locked.length===6?'Кинути всі 6':'Зарахувати й кинути'}</button><button className="main-action" disabled={!selectedScore} onClick={()=>dispatch({type:'bank'})}><Check size={18}/>Забрати {number(game.pot+selectedScore)}</button></>}
  <button className="utility" onClick={()=>setMenu(true)}><RotateCcw size={16}/> Меню</button>
  </nav>
- {(game.phase==='bust'||game.phase==='won'||(game.phase==='handoff'&&game.mode==='hotseat'))&&<div className="table-overlay"><div className="table-notice"><h2>{game.phase==='bust'?'Невдалий кидок':game.phase==='won'?`${playerName(game)} — перемога!`:`Хід: ${nextName}`}</h2><p>{game.phase==='won'?`Рахунок — ${number(game.scores[game.player])}`:game.message}</p>{game.phase==='won'?<button className="primary" onClick={()=>dispatch({type:'new',mode:game.mode})}>Зіграти ще раз</button>:game.mode==='hotseat'?<button className="primary" onClick={()=>dispatch({type:'next'})}>Передати хід <ArrowRight size={16}/></button>:<span>Наступний хід…</span>}</div></div>}
+ {game.result&&<TurnSummary key={`${game.rollId}-${game.phase}`} game={game} nextName={nextName} onNext={()=>dispatch({type:'next'})} onRestart={()=>dispatch({type:'new',mode:game.mode})}/>}
  <Dialog open={menu} onOpenChange={setMenu}><DialogContent className="game-dialog" showCloseButton={false}><DialogClose className="dialog-close" aria-label="Закрити меню"><X size={20}/></DialogClose><DialogTitle className="dialog-title">Корчма</DialogTitle><DialogDescription>Нова партія до 4 000 очок</DialogDescription><div className="menu-options"><button className="primary" onClick={()=>{setMenu(false);requestNew('bot');}}><Crown size={20}/> Проти корчмаря</button><button className="primary" onClick={()=>{setMenu(false);requestNew('hotseat');}}><Shield size={20}/> Удвох на одному пристрої</button><DialogClose className="secondary">Повернутися до гри</DialogClose></div></DialogContent></Dialog>
  <Dialog open={rules} onOpenChange={setRules}><DialogContent className="game-dialog" showCloseButton={false}><DialogClose className="dialog-close" aria-label="Закрити правила"><X size={20}/></DialogClose><DialogTitle className="dialog-title">Правила корчми</DialogTitle><DialogDescription>Перший, хто набере 4 000 очок, перемагає.</DialogDescription><div className="rules-body"><p>Киньте шість кубиків. Виберіть хоча б одну залікову комбінацію, а потім заберіть очки або киньте решту кубиків ще раз.</p><div className="rule-row"><span>Одна 1 / одна 5</span><b>100 / 50</b></div><div className="rule-row"><span>Три 1</span><b>1 000</b></div><div className="rule-row"><span>Три 2, 3, 4, 5 або 6</span><b>200–600</b></div><div className="rule-row"><span>Кожен наступний однаковий</span><b>подвоює комбінацію</b></div><div className="rule-row"><span>1–2–3–4–5</span><b>500</b></div><div className="rule-row"><span>2–3–4–5–6</span><b>750</b></div><div className="rule-row"><span>1–2–3–4–5–6</span><b>1 500</b></div><p><b>Невдалий кидок:</b> якщо жоден кубик не дає очок, усі незабрані очки цього ходу згорають. Загальний рахунок залишається.</p><p><b>Усі шість залікові?</b> Можна знову кинути всі шість і продовжити накопичувати очки.</p><p>Комбінації складаються тільки з одного кидка. Відкладені кубики не можна додати до нової комбінації.</p><DialogClose className="primary">До столу</DialogClose></div></DialogContent></Dialog>
  <Dialog open={newMode!==null} onOpenChange={open=>{if(!open)setNewMode(null);}}><DialogContent className="game-dialog" showCloseButton={false}><DialogTitle className="dialog-title">Почати нову партію?</DialogTitle><DialogDescription>Поточний рахунок буде скинуто. Режим: {newMode==='bot'?'проти корчмаря':'удвох на одному пристрої'}.</DialogDescription><div className="dialog-actions"><button className="secondary" onClick={()=>setNewMode(null)}>Продовжити гру</button><button className="primary" onClick={()=>{dispatch({type:'new',mode:newMode!});setNewMode(null);}}>Нова партія</button></div></DialogContent></Dialog>
  </main>
 }
-function PlayerScore({game,p}:{game:Game;p:number}){const active=game.player===p;return <section className={`score-note ${p===0?'near':'far'} ${active?'active':''}`} aria-label={`Рахунок: ${playerName(game,p)}`}><h2>{playerName(game,p)}{active&&<span className="turn-mark" aria-label="Зараз грає">◆</span>}</h2><div className="total-line"><span>Рахунок / 4000</span><strong>{number(game.scores[p])}</strong></div><dl><div><dt>За хід</dt><dd>{active?number(game.pot):0}</dd></div><div><dt>Вибрано</dt><dd>{active?number(scoreDice(game.selected.map(i=>game.dice[i]))):0}</dd></div></dl></section>}
+function PlayerScore({game,p}:{game:Game;p:number}){const active=game.player===p;return <section className={`score-note ${p===0?'near':'far'} ${active?'active':''} ${game.result?.player===p&&game.result.earned?'score-earned':''}`} aria-label={`Рахунок: ${playerName(game,p)}`}><h2>{playerName(game,p)}{active&&<span className="turn-mark" aria-label="Зараз грає">◆</span>}</h2><div className="total-line"><span>Рахунок / 4000</span><strong>{game.result?.player===p?<CountUp key={`${game.rollId}-${game.phase}`} from={game.result.before} to={game.result.after}/>:number(game.scores[p])}</strong></div><dl><div><dt>За хід</dt><dd>{active?number(game.pot):0}</dd></div><div><dt>Вибрано</dt><dd>{active?number(scoreDice(game.selected.map(i=>game.dice[i]))):0}</dd></div></dl></section>}
+
+function CountUp({from,to}:{from:number;to:number}){
+ const [value,setValue]=useState(from);
+ useEffect(()=>{
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){setValue(to);return;}
+  let frame=0;const start=performance.now()+450;
+  const tick=(now:number)=>{const t=Math.min(1,Math.max(0,(now-start)/1100));setValue(Math.round(from+(to-from)*(1-(1-t)**3)));if(t<1)frame=requestAnimationFrame(tick);};
+  frame=requestAnimationFrame(tick);return()=>cancelAnimationFrame(frame);
+ },[from,to]);
+ return <><span aria-hidden="true">{number(value)}</span><span className="sr-only">{number(to)}</span></>;
+}
+function TurnSummary({game,nextName,onNext,onRestart}:{game:Game;nextName:string;onNext:()=>void;onRestart:()=>void}){
+ const result=game.result!;const won=game.phase==='won',bust=game.phase==='bust';
+ const [ready,setReady]=useState(false);
+ useEffect(()=>{const id=setTimeout(()=>setReady(true),1800);return()=>clearTimeout(id);},[]);
+ return <div className="table-overlay result-overlay"><section className={`turn-result ${bust?'result-bust':''}`} aria-label="Підсумок ходу">
+ <div role="status" className="sr-only">{playerName(game,result.player)}: {result.earned} очок за хід. {bust&&result.lost?`Втрачено ${result.lost} незабраних очок.`:''} Загальний рахунок: {result.after}.{won?' Перемога!':''}</div>
+ <p className="result-caption">{won?'Перемога':bust?'Невдалий кидок':'Хід завершено'}</p>
+ <h2>{playerName(game,result.player)}</h2>
+ <div className="result-points">+{number(result.earned)}<span>очок за хід</span></div>
+ {bust&&<p className="result-loss">{result.lost?`Згоріло ${number(result.lost)} незабраних очок`:'Жодної залікової комбінації'}</p>}
+ <div className="result-total"><span>Загальний рахунок</span><div>{number(result.before)} <ArrowRight size={20}/><strong><CountUp from={result.before} to={result.after}/></strong></div></div>
+ <div className="result-footer">{won?<button className="primary" disabled={!ready} onClick={onRestart}>Зіграти ще раз</button>:<><p>Далі: {nextName}</p><button className="primary" disabled={!ready} onClick={onNext}>{game.mode==='hotseat'?'Передати хід':'Продовжити'} <ArrowRight size={18}/></button></>}</div>
+ </section></div>;
+}
