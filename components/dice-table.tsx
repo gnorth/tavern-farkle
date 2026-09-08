@@ -18,14 +18,16 @@ export default function DiceTable(props:Props){
   try{renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});}catch{setError(true);return;}
   renderer.setPixelRatio(Math.min(window.devicePixelRatio,1.7));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.35;host.appendChild(renderer.domElement);renderer.domElement.setAttribute('aria-hidden','true');
   const scene=new THREE.Scene();const camera=new THREE.OrthographicCamera(-7,7,5,-5,.1,100);camera.up.set(0,0,-1);camera.position.set(0,20,0);camera.lookAt(0,0,0);
-  scene.add(new THREE.HemisphereLight(0xffe6c7,0x302031,2.5));const light=new THREE.DirectionalLight(0xffcd86,3.2);light.position.set(-4,9,5);light.castShadow=true;light.shadow.mapSize.set(1024,1024);Object.assign(light.shadow.camera,{left:-9,right:9,top:9,bottom:-9,near:.5,far:25});light.shadow.bias=-.001;scene.add(light);const fill=new THREE.PointLight(0xff8e36,12,20);fill.position.set(7,3,-4);scene.add(fill);
+  scene.add(new THREE.HemisphereLight(0xffe6c7,0x302031,2.5));const light=new THREE.DirectionalLight(0xffcd86,3.2);light.position.set(-3,16,3);light.castShadow=true;light.shadow.mapSize.set(1024,1024);Object.assign(light.shadow.camera,{left:-9,right:9,top:9,bottom:-9,near:.5,far:25});light.shadow.bias=-.001;scene.add(light);const fill=new THREE.PointLight(0xff8e36,12,20);fill.position.set(7,3,-4);scene.add(fill);
   const world=createWorld();
   const textures=faceValues.map(pipTexture),wood=woodTexture();const geometry=new RoundedBoxGeometry(.95,.95,.95,3,.07);
   const rings:THREE.Mesh[]=[];const meshes:THREE.Mesh<THREE.BufferGeometry,THREE.MeshStandardMaterial[]>[]=[];const bodies:CANNON.Body[]=[];
   const boardMat=new THREE.MeshStandardMaterial({map:wood,roughness:.92,color:0xffffff});boardMat.onBeforeCompile=(shader)=>{shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',`#include <map_fragment>
 float woodLuminance = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
 vec3 mutedWood = mix(vec3(woodLuminance), diffuseColor.rgb, 0.25);
-diffuseColor.rgb = mix(vec3(0.26), mutedWood, 0.38) * 0.42;`);};boardMat.customProgramCacheKey=()=> 'muted-oak-low-contrast-v2';const edgeMat=new THREE.MeshStandardMaterial({color:0x714526,roughness:.7});const brass=new THREE.MeshStandardMaterial({color:0xd5a14d,metalness:.65,roughness:.48});
+diffuseColor.rgb = mix(vec3(0.26), mutedWood, 0.38) * 0.42;`);shader.fragmentShader=shader.fragmentShader.replace('#include <opaque_fragment>',`float tableLightness = dot(outgoingLight, vec3(0.2126, 0.7152, 0.0722));
+outgoingLight = mix(vec3(tableLightness), outgoingLight, 0.45) * 0.18;
+#include <opaque_fragment>`);};boardMat.customProgramCacheKey=()=> 'dark-walnut-contrast-v3';const edgeMat=new THREE.MeshStandardMaterial({color:0x714526,roughness:.7});const brass=new THREE.MeshStandardMaterial({color:0xd5a14d,metalness:.65,roughness:.48});
   function box(w:number,h:number,d:number,x:number,y:number,z:number,m:THREE.Material,solid=false){const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);mesh.position.set(x,y,z);mesh.receiveShadow=true;mesh.castShadow=true;scene.add(mesh);if(solid){const b=new CANNON.Body({mass:0,shape:new CANNON.Box(new CANNON.Vec3(w/2,h/2,d/2))});b.position.set(x,y,z);world.addBody(b);}return mesh;}
   wood.wrapS=wood.wrapT=THREE.RepeatWrapping;wood.repeat.set(5,5);box(90,.45,65,0,-.225,0,boardMat);
   let rolling=false,active:number[]=[],rollId=0,start=0,lastNudge=0;
