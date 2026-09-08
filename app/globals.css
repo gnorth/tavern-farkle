@@ -31,3 +31,9 @@
 @media(max-width:600px) and (orientation:portrait){.active-turn-label{font-size:12px;margin:0 0 5px;padding:1px 6px}.game-status{top:180px}}
 @media(max-height:520px) and (orientation:landscape){.active-turn-label{font-size:12px;margin:0 0 4px;padding:1px 6px}}
 @media(prefers-reduced-motion:reduce){.score-note{transition:none}}
+
+.selection-hint{position:absolute;z-index:5;right:28px;bottom:275px;width:235px;padding:14px 18px;background:linear-gradient(125deg,#392b1ff2,#251b13f2);border:1px solid #c29b59;border-radius:6px;box-shadow:0 5px 20px #0004;pointer-events:none}.selection-hint-label{font-size:14px;color:#d6bf96}.selection-hint-content{animation:hint-reveal .2s ease-out}.selection-hint strong{display:block;color:#ffe09b;font-size:34px;line-height:1.3;font-variant-numeric:tabular-nums}.selection-hint small{font-size:17px;font-weight:normal}.selection-hint-parts{font-size:16px;color:#f1ddba;margin-top:4px}.selection-hint-parts>div{display:flex;justify-content:space-between;gap:10px}.selection-hint-parts b{font-weight:normal;color:#e6c88c}.selection-hint-parts>div+div{margin-top:3px}
+@keyframes hint-reveal{from{opacity:.4;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media(max-width:600px) and (orientation:portrait){.selection-hint{right:14px;bottom:145px;width:210px;padding:10px 14px}.selection-hint strong{font-size:28px}.selection-hint-parts{font-size:15px}}
+@media(max-height:520px) and (orientation:landscape){.selection-hint{right:14px;bottom:210px;width:220px;padding:8px 13px}.selection-hint strong{font-size:27px}.selection-hint-label{font-size:13px}.selection-hint-parts{font-size:14px}}
+@media(prefers-reduced-motion:reduce){.selection-hint-content{animation:none}}

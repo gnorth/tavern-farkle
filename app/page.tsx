@@ -3,7 +3,7 @@ import { useEffect, useReducer, useRef, useState } from 'react';
 import { Dices, BookOpen, RotateCcw, Shield, Crown, ArrowRight, Check, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog';
 import DiceTable from '@/components/dice-table';
-import { gameReducer, initialGame, scoreDice, bestSelection, playerName, type Mode, type Game } from '@/lib/game';
+import { gameReducer, initialGame, scoreDice, selectionBreakdown, bestSelection, playerName, type Mode, type Game } from '@/lib/game';
 const number=(n:number)=>n.toLocaleString('uk-UA');
 
 export default function Home(){
@@ -12,6 +12,7 @@ export default function Home(){
  const gameRef=useRef(game);gameRef.current=game;
  const isBot=game.mode==='bot'&&game.player===1;
  const selectedScore=scoreDice(game.selected.map(i=>game.dice[i]));
+ const selectedParts=selectionBreakdown(game.selected.map(i=>game.dice[i]));
  const canChoose=game.phase==='choose'&&!isBot;
  const nextName=playerName(game,1-game.player);
  const selectedInvalid=game.selected.length>0&&!selectedScore;
@@ -43,6 +44,11 @@ export default function Home(){
  <DiceTable game={game} interactive={canChoose&&!rules&&!menu&&!newMode} onSelect={id=>dispatch({type:'toggle',id})} onResult={(values,rollId)=>dispatch({type:'rolled',values,rollId})}/>
  <PlayerScore game={game} p={1}/><PlayerScore game={game} p={0}/>
  <div className="game-status" role="status">{game.phase==='rolling'?'Кубики котяться…':isBot&&!game.result?'Хід корчмаря':game.phase==='choose'?(selectedInvalid?'Ця комбінація не дає очок':game.selected.length?'':'Виберіть кубики'):game.phase==='ready'?`Хід: ${playerName(game)}`:''}</div>
+ {canChoose&&selectedScore>0&&!rules&&!menu&&!newMode&&<aside className="selection-hint" role="status" aria-live="polite" aria-atomic="true">
+ <span className="selection-hint-label">Залікова комбінація</span>
+ <div key={game.selected.join(',')} className="selection-hint-content"><strong>+{number(selectedScore)} <small>очок</small></strong>
+ <div className="selection-hint-parts">{selectedParts.map(part=><div key={part.label}><span>{part.label}</span>{selectedParts.length>1&&<b>+{number(part.points)}</b>}</div>)}</div></div>
+ </aside>}
  <nav className="game-actions" aria-label="Дії гри">
  <button className="utility" onClick={()=>setRules(true)}><BookOpen size={16}/> Правила</button>
  {game.phase==='ready'&&!isBot&&<button className="main-action" onClick={()=>dispatch({type:'roll'})}><Dices size={19}/> Кинути кубики</button>}

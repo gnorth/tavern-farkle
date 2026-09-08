@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {scoreDice,bestSelection,initialGame,gameReducer,type Game} from '../lib/game.ts';
+import {scoreDice,selectionBreakdown,bestSelection,initialGame,gameReducer,type Game} from '../lib/game.ts';
 const roll=(g:Game,values:number[])=>{g=gameReducer(g,{type:'roll'});return gameReducer(g,{type:'rolled',rollId:g.rollId,values:Object.fromEntries(values.map((v,i)=>[i,v]))});};
 test('standard scoring, doubling, straights and invalid leftover dice',()=>{
  for(const [dice,expected] of [ [[1],100],[[5],50],[[2],0],[[1,1,1],1000],[[1,1,1,1,1,1],8000],[[3,3,3,3],600],[[2,3,4,5,6],750],[[1,2,3,4,5],500],[[1,2,3,4,5,6],1500],[[1,1,2,3,4,5],600],[[1,2],0],[[5,5,5,5,5],2000] ] as [number[],number][])assert.equal(scoreDice(dice),expected,dice.join(','));
@@ -13,3 +13,9 @@ test('stale physics callbacks do not affect a new game',()=>{let g=gameReducer(i
 test('reaching target ends game immediately',()=>{let g=initialGame();g.scores=[3950,0];g=roll(g,[1,2,3,4,6,6]);g=gameReducer(g,{type:'toggle',id:0});g=gameReducer(g,{type:'bank'});assert.equal(g.phase,'won');assert.deepEqual(g.result,{player:0,earned:100,lost:0,before:3950,after:4050});assert.equal(g.winner,0);assert.equal(gameReducer(g,{type:'roll'}),g);});
 test('locked dice cannot be reused or selected',()=>{let g=roll(initialGame(),[1,2,3,4,6,6]);g=gameReducer(g,{type:'toggle',id:0});g=roll(g,[6,1,2,3,4,6]);assert.equal(g.dice[0],1);assert.deepEqual(g.locked,[0]);assert.equal(gameReducer(g,{type:'toggle',id:0}),g);assert.ok(!bestSelection(g.dice,g.locked).ids.includes(0));});
 test('all 46,656 six-die outcomes produce a valid best choice or genuine bust',()=>{for(let n=0;n<46656;n++){let k=n;const dice=Array.from({length:6},()=>{const v=k%6+1;k=Math.floor(k/6);return v;});const b=bestSelection(dice);assert.equal(scoreDice(b.ids.map(i=>dice[i])),b.score);if(!b.score){assert.ok(!dice.includes(1)&&!dice.includes(5));assert.ok([2,3,4,6].every(v=>dice.filter(x=>x===v).length<3));}}});
+
+test('selection hint explains only valid scoring combinations',()=>{
+ assert.deepEqual(selectionBreakdown([5,5,5]),[{label:'Три п’ятірки',points:500}]);
+ assert.deepEqual(selectionBreakdown([1,2]),[]);
+ for(const dice of [[1,5],[1,1,2,3,4,5],[2,3,4,5,6],[1,1,1,1],[5,5,5,5,5,5]])assert.equal(selectionBreakdown(dice).reduce((n,p)=>n+p.points,0),scoreDice(dice));
+});

@@ -46,3 +46,19 @@ export function gameReducer(g:Game,a:Action):Game{
  if(a.type==='next'&&(g.phase==='bust'||g.phase==='handoff'))return {...g,result:null,player:1-g.player,phase:'ready',pot:0,locked:[],selected:[],round:g.round+(g.player===1?1:0),message:'Ваш хід. Кидайте кубики.'};
  return g;
 }
+
+export function selectionBreakdown(dice:number[]):{label:string;points:number}[]{
+ if(!scoreDice(dice))return [];
+ const counts=Array(7).fill(0);dice.forEach(v=>counts[v]++);
+ const parts:{label:string;points:number}[]=[];
+ for(const [values,points] of [[[1,2,3,4,5,6],1500],[[1,2,3,4,5],500],[[2,3,4,5,6],750]] as [number[],number][]){
+  if(values.every(v=>counts[v])){parts.push({label:values.join('–'),points});values.forEach(v=>counts[v]--);break;}
+ }
+ const names=['','одиниці','двійки','трійки','четвірки','п’ятірки','шістки'];
+ for(let v=1;v<=6;v++){
+  const n=counts[v];if(!n)continue;
+  const label=n===1?(v===1?'Одиниця':'П’ятірка'):n===2?`Дві ${names[v]}`:n===3?`Три ${names[v]}`:`${n} × ${v}`;
+  parts.push({label,points:n>=3?(v===1?1000:v*100)*2**(n-3):n*(v===1?100:50)});
+ }
+ return parts;
+}
