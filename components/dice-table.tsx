@@ -22,7 +22,9 @@ export default function DiceTable(props:Props){
   const world=createWorld();
   const textures=faceValues.map(pipTexture),wood=woodTexture();const geometry=new RoundedBoxGeometry(.95,.95,.95,3,.07);
   const rings:THREE.Mesh[]=[];const meshes:THREE.Mesh<THREE.BufferGeometry,THREE.MeshStandardMaterial[]>[]=[];const bodies:CANNON.Body[]=[];
-  const boardMat=new THREE.MeshStandardMaterial({map:wood,roughness:.92,color:0xffffff});const edgeMat=new THREE.MeshStandardMaterial({color:0x714526,roughness:.7});const brass=new THREE.MeshStandardMaterial({color:0xd5a14d,metalness:.65,roughness:.48});
+  const boardMat=new THREE.MeshStandardMaterial({map:wood,roughness:.92,color:0xffffff});boardMat.onBeforeCompile=(shader)=>{shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',`#include <map_fragment>
+float woodLuminance = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+diffuseColor.rgb = mix(vec3(woodLuminance), diffuseColor.rgb, 0.25) * 0.42;`);};boardMat.customProgramCacheKey=()=> 'muted-oak-v1';const edgeMat=new THREE.MeshStandardMaterial({color:0x714526,roughness:.7});const brass=new THREE.MeshStandardMaterial({color:0xd5a14d,metalness:.65,roughness:.48});
   function box(w:number,h:number,d:number,x:number,y:number,z:number,m:THREE.Material,solid=false){const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);mesh.position.set(x,y,z);mesh.receiveShadow=true;mesh.castShadow=true;scene.add(mesh);if(solid){const b=new CANNON.Body({mass:0,shape:new CANNON.Box(new CANNON.Vec3(w/2,h/2,d/2))});b.position.set(x,y,z);world.addBody(b);}return mesh;}
   wood.wrapS=wood.wrapT=THREE.RepeatWrapping;wood.repeat.set(5,5);box(90,.45,65,0,-.225,0,boardMat);
   let rolling=false,active:number[]=[],rollId=0,start=0,lastNudge=0;
