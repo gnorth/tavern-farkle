@@ -55,7 +55,7 @@ export default function Home(){
  <Dialog open={newMode!==null} onOpenChange={open=>{if(!open)setNewMode(null);}}><DialogContent className="game-dialog" showCloseButton={false}><DialogTitle className="dialog-title">Почати нову партію?</DialogTitle><DialogDescription>Поточний рахунок буде скинуто. Режим: {newMode==='bot'?'проти корчмаря':'удвох на одному пристрої'}.</DialogDescription><div className="dialog-actions"><button className="secondary" onClick={()=>setNewMode(null)}>Продовжити гру</button><button className="primary" onClick={()=>{dispatch({type:'new',mode:newMode!});setNewMode(null);}}>Нова партія</button></div></DialogContent></Dialog>
  </main>
 }
-function PlayerScore({game,p}:{game:Game;p:number}){const active=game.player===p;return <section className={`score-note ${p===0?'near':'far'} ${active?'active':''} ${game.result?.player===p&&game.result.earned?'score-earned':''}`} aria-label={`Рахунок: ${playerName(game,p)}`}><h2>{playerName(game,p)}{active&&<span className="turn-mark" aria-label="Зараз грає">◆</span>}</h2><div className="total-line"><span>Рахунок / 4000</span><strong>{game.result?.player===p?<CountUp key={`${game.rollId}-${game.phase}`} from={game.result.before} to={game.result.after}/>:number(game.scores[p])}</strong></div><dl><div><dt>За хід</dt><dd>{active?number(game.pot):0}</dd></div><div><dt>Вибрано</dt><dd>{active?number(scoreDice(game.selected.map(i=>game.dice[i]))):0}</dd></div></dl></section>}
+function PlayerScore({game,p}:{game:Game;p:number}){const active=game.player===p;return <section className={`score-note ${p===0?'near':'far'} ${active?'active':''} ${game.result?.player===p&&game.result.earned?'score-earned':''}`} aria-label={`Рахунок: ${playerName(game,p)}`}><h2>{playerName(game,p)}{active&&<span className="turn-mark" aria-label="Зараз грає">◆</span>}</h2>{game.result?.player===p&&<div key={`${game.rollId}-${game.phase}`} className={`score-gain ${game.result.earned?'':'score-gain-bust'}`}><b>+{number(game.result.earned)}</b><span>{game.result.lost?`Згоріло ${number(game.result.lost)}`:'За хід'}</span></div>}<div className="total-line"><span>Рахунок / 4000</span><strong>{game.result?.player===p?<CountUp key={`${game.rollId}-${game.phase}`} from={game.result.before} to={game.result.after}/>:number(game.scores[p])}</strong></div><dl><div><dt>За хід</dt><dd>{active?number(game.pot):0}</dd></div><div><dt>Вибрано</dt><dd>{active?number(scoreDice(game.selected.map(i=>game.dice[i]))):0}</dd></div></dl></section>}
 
 function CountUp({from,to}:{from:number;to:number}){
  const [value,setValue]=useState(from);
@@ -71,7 +71,7 @@ function TurnSummary({game,nextName,onNext,onRestart}:{game:Game;nextName:string
  const result=game.result!;const won=game.phase==='won',bust=game.phase==='bust';
  const [ready,setReady]=useState(false);
  useEffect(()=>{const id=setTimeout(()=>setReady(true),1800);return()=>clearTimeout(id);},[]);
- return <div className="table-overlay result-overlay"><section className={`turn-result ${bust?'result-bust':''}`} aria-label="Підсумок ходу">
+ return <div className={won?"table-overlay result-overlay":"turn-feedback"}><section className={`turn-result ${bust?'result-bust':''}`} aria-label="Підсумок ходу">
  <div role="status" className="sr-only">{playerName(game,result.player)}: {result.earned} очок за хід. {bust&&result.lost?`Втрачено ${result.lost} незабраних очок.`:''} Загальний рахунок: {result.after}.{won?' Перемога!':''}</div>
  <p className="result-caption">{won?'Перемога':bust?'Невдалий кидок':'Хід завершено'}</p>
  <h2>{playerName(game,result.player)}</h2>
