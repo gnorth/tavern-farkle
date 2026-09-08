@@ -5,15 +5,8 @@ export function upperFace(q:CANNON.Quaternion){let best=-2,index=0;normals.forEa
 export const PHYSICS_STEP=1/120;
 const woodMaterial=new CANNON.Material('wood');
 const boneMaterial=new CANNON.Material('bone');
-// A convex bevel matches the rendered rounded edges instead of balancing on a sharp box edge.
-export function diceShape(){
- const a=.475,b=.445;const vertices:CANNON.Vec3[]=[];
- for(let axis=0;axis<3;axis++)for(const x of [-1,1])for(const y of [-1,1])for(const z of [-1,1]){const p=[b*x,b*y,b*z];p[axis]=a*[x,y,z][axis];vertices.push(new CANNON.Vec3(...p));}
- const normals:CANNON.Vec3[]=[];
- for(let x=-1;x<=1;x++)for(let y=-1;y<=1;y++)for(let z=-1;z<=1;z++)if(x||y||z)normals.push(new CANNON.Vec3(x,y,z).unit());
- const faces=normals.map(n=>{const support=Math.max(...vertices.map(v=>v.dot(n)));const ids=vertices.map((_,i)=>i).filter(i=>support-vertices[i].dot(n)<1e-6);const center=new CANNON.Vec3();ids.forEach(i=>center.vadd(vertices[i],center));center.scale(1/ids.length,center);const u=n.cross(Math.abs(n.x)<.9?new CANNON.Vec3(1,0,0):new CANNON.Vec3(0,1,0)).unit();const v=n.cross(u);return ids.sort((i,j)=>{const p=vertices[i].vsub(center),q=vertices[j].vsub(center);return Math.atan2(p.dot(v),p.dot(u))-Math.atan2(q.dot(v),q.dot(u));});});
- return new CANNON.ConvexPolyhedron({vertices,faces});
-}
+// Plain cube: no bevel surfaces on which a die can rest.
+export function diceShape(){return new CANNON.Box(new CANNON.Vec3(.475,.475,.475));}
 export function createWorld(){const world=new CANNON.World({gravity:new CANNON.Vec3(0,-42,0),allowSleep:true});(world.solver as CANNON.GSSolver).iterations=20;
  world.addContactMaterial(new CANNON.ContactMaterial(woodMaterial,boneMaterial,{friction:.52,restitution:.10,contactEquationStiffness:1e7,contactEquationRelaxation:4}));
  world.addContactMaterial(new CANNON.ContactMaterial(boneMaterial,boneMaterial,{friction:.32,restitution:.18,contactEquationStiffness:1e7,contactEquationRelaxation:4}));
