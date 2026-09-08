@@ -25,3 +25,9 @@
 @media(max-width:600px) and (orientation:portrait){.score-gain{left:0;top:calc(100% + 10px);min-width:150px;text-align:center}.score-gain b{font-size:29px}.score-gain span{font-size:15px}.turn-feedback{bottom:155px;width:calc(100% - 32px)}.turn-feedback .result-footer p{font-size:17px}}
 @media(max-height:520px) and (orientation:landscape){.turn-feedback{bottom:15px;width:270px}.turn-feedback .result-footer p{display:block;margin:0 0 6px}.score-gain{top:15px;left:calc(100% + 10px);min-width:120px}.score-gain b{font-size:28px}}
 @media(prefers-reduced-motion:reduce){.score-gain,.turn-feedback .turn-result{animation:none}}
+
+/* The active player's parchment is the primary turn indicator. */
+.score-note{transition:box-shadow .3s ease,border-color .3s ease,background .3s ease}.score-note.active{border-color:#f5cd70;background:linear-gradient(115deg,#f4e3bbeF,#e2c78eed);box-shadow:inset 0 0 0 2px #f9d986,inset 0 0 20px #ffd36c45,0 0 22px #eeb34780,3px 5px 12px #140c0770}.score-note.active h2{color:#45270e}.active-turn-label{display:inline-flex;align-items:center;gap:6px;margin:-3px 0 9px;padding:2px 8px;border-radius:3px;background:#6d421b;color:#fff0bc;font-size:14px;font-weight:bold;line-height:1.4;letter-spacing:.02em}.active-turn-label:before{content:'';width:6px;height:6px;border-radius:50%;background:#ffe39a;box-shadow:0 0 7px #ffda74}.score-note.active .turn-mark{color:#88520c;text-shadow:0 0 6px #ffd975}
+@media(max-width:600px) and (orientation:portrait){.active-turn-label{font-size:12px;margin:0 0 5px;padding:1px 6px}.game-status{top:180px}}
+@media(max-height:520px) and (orientation:landscape){.active-turn-label{font-size:12px;margin:0 0 4px;padding:1px 6px}}
+@media(prefers-reduced-motion:reduce){.score-note{transition:none}}
