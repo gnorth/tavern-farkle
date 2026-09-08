@@ -8,6 +8,7 @@ export function upperFace(q:CANNON.Quaternion){let best=-2,index=0;normals.forEa
 export const PHYSICS_STEP=1/120;
 const woodMaterial=new CANNON.Material('wood');
 const boneMaterial=new CANNON.Material('bone');
+const awaitingLanding=new WeakSet<CANNON.Body>();
 // Sample spherical corners around a smaller cube, retaining six broad flat faces.
 // Merge coplanar hull triangles so contacts use continuous faces.
 export function diceShape(){
@@ -37,15 +38,27 @@ export function createWorld(){const world=new CANNON.World({gravity:new CANNON.V
  world.addContactMaterial(new CANNON.ContactMaterial(woodMaterial,boneMaterial,{friction:.50,restitution:.035,contactEquationStiffness:1e7,contactEquationRelaxation:4}));
  world.addContactMaterial(new CANNON.ContactMaterial(boneMaterial,boneMaterial,{friction:.12,restitution:.10,contactEquationStiffness:1e7,contactEquationRelaxation:4}));
  for(const [w,h,d,x,y,z] of [[13,.45,9,0,-.225,0],[.35,10,9,-6.3,5,0],[.35,10,9,6.3,5,0],[13,10,.35,0,5,4.35],[13,10,.35,0,5,-4.35]]){const b=new CANNON.Body({mass:0,material:woodMaterial,shape:new CANNON.Box(new CANNON.Vec3(w/2,h/2,d/2))});b.position.set(x,y,z);world.addBody(b);}
+ // A heavy first impact dissipates the throw's forward energy on the wood.
+ world.addEventListener('postStep',()=>{for(const contact of world.contacts){
+  const die=awaitingLanding.has(contact.bi)?contact.bi:awaitingLanding.has(contact.bj)?contact.bj:null;
+  if(!die)continue;const other=contact.bi===die?contact.bj:contact.bi;
+  if(other.mass!==0||other.position.y>=0)continue;
+  awaitingLanding.delete(die);die.velocity.x*=.42;die.velocity.z*=.42;die.angularVelocity.scale(.35,die.angularVelocity);
+ }});
  return world;
 }
 export function createDie(world:CANNON.World){const b=new CANNON.Body({mass:2.8,material:boneMaterial,shape:diceShape(),linearDamping:.18,angularDamping:.32,allowSleep:true,sleepSpeedLimit:.10,sleepTimeLimit:.5});world.addBody(b);return b;}
 export function launchDie(b:CANNON.Body,j:number,random:()=>number=Math.random){
  recoveryAttempts.delete(b);b.type=CANNON.Body.DYNAMIC;b.updateMassProperties();b.wakeUp();
- b.position.set((j%3-1)*1.65+(random()-.5)*.08,.85+random()*.07,1.55+Math.floor(j/3)*1.6);
+ const row=Math.floor(j/3),lane=j%3-1;
+ b.position.set(lane*1.65,1.2+row*1.6,3.5);
+ awaitingLanding.add(b);
  // Uniform random orientation; outcomes still come solely from the physical resting face.
  const u=random(),v=random()*2*Math.PI,w=random()*2*Math.PI;b.quaternion.set(Math.sqrt(1-u)*Math.sin(v),Math.sqrt(1-u)*Math.cos(v),Math.sqrt(u)*Math.sin(w),Math.sqrt(u)*Math.cos(w));
- b.velocity.set((j%3-1)*1.1+(random()-.5)*2.6,.8+random()*.5,-(10.5+random()*2.5));
+ // Solve the flight to a spread of landing points around the table center.
+ const up=2+random()*.3,flight=(up+Math.sqrt(up*up+120*(b.position.y-.7)))/60;
+ const targetX=lane*1.45+(random()-.5)*.24,targetZ=(row?.8:-.6)+(random()-.5)*.2;
+ b.velocity.set((targetX-b.position.x)/flight,up,(targetZ-b.position.z)/flight);
  b.angularVelocity.set(-(9+random()*4),(random()-.5)*5,(random()-.5)*4);
  b.previousPosition.copy(b.position);b.interpolatedPosition.copy(b.position);b.previousQuaternion.copy(b.quaternion);b.interpolatedQuaternion.copy(b.quaternion);b.aabbNeedsUpdate=true;
 }
@@ -57,8 +70,9 @@ export function nudgeTilted(b:CANNON.Body){
  const attempt=recoveryAttempts.get(b)??0;recoveryAttempts.set(b,attempt+1);
  let angle=attempt*2.399963+b.position.x;
  // Push away from the closest die supporting this one, instead of back into it.
- const neighbor=b.world?.bodies.filter(other=>other!==b&&other.mass>0&&other.position.distanceTo(b.position)<1.65).sort((a,c)=>a.position.distanceTo(b.position)-c.position.distanceTo(b.position))[0];
+ const neighbor=b.world?.bodies.filter(other=>other!==b&&other.shapes[0] instanceof CANNON.ConvexPolyhedron&&other.position.distanceTo(b.position)<1.65).sort((a,c)=>a.position.distanceTo(b.position)-c.position.distanceTo(b.position))[0];
  if(neighbor){const dx=b.position.x-neighbor.position.x,dz=b.position.z-neighbor.position.z;if(Math.hypot(dx,dz)>.05)angle=Math.atan2(dz,dx);}
+ if(Math.abs(b.position.x)>3||Math.abs(b.position.z)>2.5)angle=Math.atan2(-b.position.z,-b.position.x);
  const strength=1+Math.min(attempt,3)*.2;
  b.wakeUp();b.applyImpulse(new CANNON.Vec3(Math.cos(angle)*2.6*strength,4.4,Math.sin(angle)*2.6*strength).scale(b.mass),new CANNON.Vec3(Math.cos(angle+.8)*.24,0,Math.sin(angle+.8)*.24));
 }
