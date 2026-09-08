@@ -19,8 +19,8 @@ export function launchDie(b:CANNON.Body,j:number,random:()=>number=Math.random){
  b.position.set((j%3-1)*1.65+(random()-.5)*.08,.85+random()*.07,1.55+Math.floor(j/3)*1.6);
  // Uniform random orientation; outcomes still come solely from the physical resting face.
  const u=random(),v=random()*2*Math.PI,w=random()*2*Math.PI;b.quaternion.set(Math.sqrt(1-u)*Math.sin(v),Math.sqrt(1-u)*Math.cos(v),Math.sqrt(u)*Math.sin(w),Math.sqrt(u)*Math.cos(w));
- b.velocity.set((j%3-1)*.75+(random()-.5)*2.2,-.3+random()*.15,-(4+random()*1.2));
- b.angularVelocity.set(-(2.8+random()*2.4),(random()-.5)*4,(random()-.5)*3.5);
+ b.velocity.set((j%3-1)*1.1+(random()-.5)*2.6,.8+random()*.5,-(8+random()*2));
+ b.angularVelocity.set(-(7+random()*4),(random()-.5)*5,(random()-.5)*4);
  b.previousPosition.copy(b.position);b.interpolatedPosition.copy(b.position);b.previousQuaternion.copy(b.quaternion);b.interpolatedQuaternion.copy(b.quaternion);b.aabbNeedsUpdate=true;
 }
 const recoveryAttempts=new WeakMap<CANNON.Body,number>();
