@@ -1,6 +1,7 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import * as THREE from 'three';
+import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 import * as CANNON from 'cannon-es';
 import type {Game} from '@/lib/game';
 import {faceValues,normals,upperFace,createWorld,createDie,launchDie,nudgeTilted,PHYSICS_STEP} from '@/lib/physics';
@@ -19,7 +20,7 @@ export default function DiceTable(props:Props){
   const scene=new THREE.Scene();const camera=new THREE.OrthographicCamera(-7,7,5,-5,.1,100);camera.up.set(0,0,-1);camera.position.set(0,20,0);camera.lookAt(0,0,0);
   scene.add(new THREE.HemisphereLight(0xffe6c7,0x302031,2.5));const light=new THREE.DirectionalLight(0xffcd86,3.2);light.position.set(-3,16,3);light.castShadow=true;light.shadow.mapSize.set(1024,1024);Object.assign(light.shadow.camera,{left:-9,right:9,top:9,bottom:-9,near:.5,far:25});light.shadow.bias=-.001;scene.add(light);const fill=new THREE.PointLight(0xff8e36,12,20);fill.position.set(7,3,-4);scene.add(fill);
   const world=createWorld();
-  const textures=faceValues.map(pipTexture),wood=woodTexture();const geometry=new THREE.BoxGeometry(.95,.95,.95);
+  const textures=faceValues.map(pipTexture),wood=woodTexture();const geometry=new RoundedBoxGeometry(.95,.95,.95,3,.025);
   const rings:THREE.Group[]=[];const meshes:THREE.Mesh<THREE.BufferGeometry,THREE.MeshStandardMaterial[]>[]=[];const bodies:CANNON.Body[]=[];
   const boardMat=new THREE.MeshStandardMaterial({map:wood,roughness:.92,color:0xffffff});boardMat.onBeforeCompile=(shader)=>{shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',`#include <map_fragment>
 float woodLuminance = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
@@ -61,9 +62,9 @@ outgoingLight = mix(vec3(tableLightness), outgoingLight, 0.45) * 0.22;
   const resize=()=>{const w=host.clientWidth,h=host.clientHeight;renderer.setSize(w,h);const aspect=w/Math.max(h,1);const portrait=aspect<.85;camera.up.set(portrait?1:0,0,portrait?0:-1);camera.lookAt(0,0,0);const vertical=portrait?Math.max(20.5,12.4/aspect):Math.max(12.0,14/aspect);camera.left=-vertical*aspect/2;camera.right=vertical*aspect/2;camera.top=vertical/2;camera.bottom=-vertical/2;camera.updateProjectionMatrix();};const observer=new ResizeObserver(resize);observer.observe(host);resize();
   const ray=new THREE.Raycaster();const pointer=new THREE.Vector2();const click=(e:PointerEvent)=>{if(!latest.current.interactive||rolling)return;const rect=renderer.domElement.getBoundingClientRect();pointer.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);ray.setFromCamera(pointer,camera);const hit=ray.intersectObjects(meshes)[0];if(hit)latest.current.onSelect(hit.object.userData.index);};renderer.domElement.addEventListener('pointerup',click);
   let raf=0,last=performance.now();function frame(now:number){const dt=Math.min((now-last)/1000,.05);last=now;if(pendingLaunch&&now>=pendingLaunch.at){const next=pendingLaunch;pendingLaunch=null;transfers=[];beginThrow(next.ids,next.id);}world.step(PHYSICS_STEP,dt,8);bodies.forEach((b,i)=>{meshes[i].position.copy(b.interpolatedPosition as unknown as THREE.Vector3);meshes[i].quaternion.copy(b.interpolatedQuaternion as unknown as THREE.Quaternion);const transfer=transfers.find(t=>t.index===i);if(transfer){const t=transfer.duration?Math.min(1,Math.max(0,(now-transfer.start)/transfer.duration)):1;const eased=t*t*(3-2*t);meshes[i].position.lerpVectors(transfer.from,transfer.to,eased);meshes[i].position.y+=Math.sin(Math.PI*t)*.22;meshes[i].quaternion.slerpQuaternions(transfer.fromQ,transfer.toQ,eased);}rings[i].position.set(meshes[i].position.x,.06,meshes[i].position.z);const el=buttons.current[i];if(el){const p=meshes[i].position.clone().project(camera);el.style.left=`${(p.x*.5+.5)*host.clientWidth}px`;el.style.top=`${(-p.y*.5+.5)*host.clientHeight}px`;const size=Math.max(44,host.clientWidth/(camera.right-camera.left)*1.4);el.style.width=el.style.height=`${size}px`;}});
-   if(rolling&&now-start>650){const stable=active.every(i=>bodies[i].sleepState===CANNON.Body.SLEEPING);const flat=active.every(i=>upperFace(bodies[i].quaternion).alignment>.985);
+   if(rolling&&now-start>650){const stable=active.every(i=>bodies[i].sleepState===CANNON.Body.SLEEPING);const flat=active.every(i=>upperFace(bodies[i].quaternion).alignment>.985&&bodies[i].position.y<.65);
     if(stable&&flat){rolling=false;const values:Record<number,number>={};active.forEach(i=>values[i]=upperFace(bodies[i].quaternion).value);latest.current.onResult(values,rollId);}
-    else if(now-lastNudge>2500){active.forEach(i=>nudgeTilted(bodies[i]));lastNudge=now;}
+    else if(now-lastNudge>1250){active.forEach(i=>nudgeTilted(bodies[i]));lastNudge=now;}
    }renderer.render(scene,camera);raf=requestAnimationFrame(frame);}
   raf=requestAnimationFrame(frame);
   if(latest.current.game.phase==='rolling')roll(latest.current.game.dice.map((_,i)=>i).filter(i=>!latest.current.game.locked.includes(i)),latest.current.game.rollId);
