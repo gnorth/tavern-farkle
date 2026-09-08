@@ -7,20 +7,20 @@ const woodMaterial=new CANNON.Material('wood');
 const boneMaterial=new CANNON.Material('bone');
 // Plain cube: no bevel surfaces on which a die can rest.
 export function diceShape(){return new CANNON.Box(new CANNON.Vec3(.475,.475,.475));}
-export function createWorld(){const world=new CANNON.World({gravity:new CANNON.Vec3(0,-42,0),allowSleep:true});(world.solver as CANNON.GSSolver).iterations=20;
- world.addContactMaterial(new CANNON.ContactMaterial(woodMaterial,boneMaterial,{friction:.52,restitution:.10,contactEquationStiffness:1e7,contactEquationRelaxation:4}));
- world.addContactMaterial(new CANNON.ContactMaterial(boneMaterial,boneMaterial,{friction:.32,restitution:.18,contactEquationStiffness:1e7,contactEquationRelaxation:4}));
+export function createWorld(){const world=new CANNON.World({gravity:new CANNON.Vec3(0,-60,0),allowSleep:true});(world.solver as CANNON.GSSolver).iterations=20;
+ world.addContactMaterial(new CANNON.ContactMaterial(woodMaterial,boneMaterial,{friction:.50,restitution:.035,contactEquationStiffness:1e7,contactEquationRelaxation:4}));
+ world.addContactMaterial(new CANNON.ContactMaterial(boneMaterial,boneMaterial,{friction:.30,restitution:.07,contactEquationStiffness:1e7,contactEquationRelaxation:4}));
  for(const [w,h,d,x,y,z] of [[13,.45,9,0,-.225,0],[.35,10,9,-6.3,5,0],[.35,10,9,6.3,5,0],[13,10,.35,0,5,4.35],[13,10,.35,0,5,-4.35]]){const b=new CANNON.Body({mass:0,material:woodMaterial,shape:new CANNON.Box(new CANNON.Vec3(w/2,h/2,d/2))});b.position.set(x,y,z);world.addBody(b);}
  return world;
 }
-export function createDie(world:CANNON.World){const b=new CANNON.Body({mass:1.6,material:boneMaterial,shape:diceShape(),linearDamping:.10,angularDamping:.18,allowSleep:true,sleepSpeedLimit:.10,sleepTimeLimit:.5});world.addBody(b);return b;}
+export function createDie(world:CANNON.World){const b=new CANNON.Body({mass:2.8,material:boneMaterial,shape:diceShape(),linearDamping:.18,angularDamping:.32,allowSleep:true,sleepSpeedLimit:.10,sleepTimeLimit:.5});world.addBody(b);return b;}
 export function launchDie(b:CANNON.Body,j:number,random:()=>number=Math.random){
  b.type=CANNON.Body.DYNAMIC;b.updateMassProperties();b.wakeUp();
- b.position.set((j%3-1)*1.65+(random()-.5)*.08,.90+random()*.16,1.55+Math.floor(j/3)*1.6);
+ b.position.set((j%3-1)*1.65+(random()-.5)*.08,.85+random()*.07,1.55+Math.floor(j/3)*1.6);
  // Uniform random orientation; outcomes still come solely from the physical resting face.
  const u=random(),v=random()*2*Math.PI,w=random()*2*Math.PI;b.quaternion.set(Math.sqrt(1-u)*Math.sin(v),Math.sqrt(1-u)*Math.cos(v),Math.sqrt(u)*Math.sin(w),Math.sqrt(u)*Math.cos(w));
- b.velocity.set((j%3-1)*.45+(random()-.5)*1.8,.1+random()*.35,-(4.5+random()*1.5));
- b.angularVelocity.set(-(4+random()*4),(random()-.5)*7,(random()-.5)*6);
+ b.velocity.set((j%3-1)*.75+(random()-.5)*2.2,-.3+random()*.15,-(4+random()*1.2));
+ b.angularVelocity.set(-(2.8+random()*2.4),(random()-.5)*4,(random()-.5)*3.5);
  b.previousPosition.copy(b.position);b.interpolatedPosition.copy(b.position);b.previousQuaternion.copy(b.quaternion);b.interpolatedQuaternion.copy(b.quaternion);b.aabbNeedsUpdate=true;
 }
 const recoveryAttempts=new WeakMap<CANNON.Body,number>();
@@ -30,5 +30,5 @@ export function nudgeTilted(b:CANNON.Body){
  // Only free a resting cocked die with a small physical tap; never relocate it or pick its result.
  const attempt=recoveryAttempts.get(b)??0;recoveryAttempts.set(b,attempt+1);
  const angle=attempt*2.399963+b.position.x;
- b.wakeUp();b.applyImpulse(new CANNON.Vec3(Math.cos(angle)*1.25,3.6,Math.sin(angle)*1.25).scale(b.mass),new CANNON.Vec3(Math.cos(angle+.8)*.24,0,Math.sin(angle+.8)*.24));
+ b.wakeUp();b.applyImpulse(new CANNON.Vec3(Math.cos(angle)*1.8,4.4,Math.sin(angle)*1.8).scale(b.mass),new CANNON.Vec3(Math.cos(angle+.8)*.24,0,Math.sin(angle+.8)*.24));
 }
