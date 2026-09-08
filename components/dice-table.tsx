@@ -1,6 +1,5 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
-import {Check} from 'lucide-react';
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
@@ -35,8 +34,7 @@ outgoingLight = mix(vec3(tableLightness), outgoingLight, 0.45) * 0.22;
   function reset(){rolling=false;bodies.forEach((b,i)=>{b.type=CANNON.Body.STATIC;b.position.set((i%3-1)*1.8,.51,(Math.floor(i/3)-.5)*1.8);b.quaternion.setFromEuler(0,0,0);const target=normals[faceValues.indexOf(i+1)];b.quaternion.setFromVectors(target,new CANNON.Vec3(0,1,0));b.velocity.setZero();b.angularVelocity.setZero();b.updateMassProperties();b.previousPosition.copy(b.position);b.interpolatedPosition.copy(b.position);b.previousQuaternion.copy(b.quaternion);b.interpolatedQuaternion.copy(b.quaternion);b.aabbNeedsUpdate=true;});}
   for(let i=0;i<6;i++){const material=textures.map(map=>new THREE.MeshStandardMaterial({map,roughness:.58,metalness:0,emissive:0x000000}));const mesh=new THREE.Mesh(geometry,material);mesh.castShadow=mesh.receiveShadow=true;mesh.userData.index=i;scene.add(mesh);meshes.push(mesh);const ring=new THREE.Group();
    const ringBand=(radius:number,thickness:number,color:number,order:number)=>{const band=new THREE.Mesh(new THREE.TorusGeometry(radius,thickness,10,72),new THREE.MeshBasicMaterial({color,depthTest:false,depthWrite:false,toneMapped:false}));band.rotation.x=-Math.PI/2;band.renderOrder=order;ring.add(band);};
-   const halo=new THREE.Mesh(new THREE.RingGeometry(.62,1.08,72),new THREE.MeshBasicMaterial({color:0xe8a532,transparent:true,opacity:.17,depthTest:false,depthWrite:false,toneMapped:false,side:THREE.DoubleSide}));halo.rotation.x=-Math.PI/2;halo.renderOrder=1;ring.add(halo);
-   ringBand(.80,.095,0x36200b,2);ringBand(.80,.055,0xeab34e,3);ringBand(.774,.013,0xffebaa,4);ringBand(.96,.022,0xb78334,3);
+   ringBand(.72,.025,0x3b2915,2);ringBand(.72,.012,0xcda663,3);
    ring.visible=false;scene.add(ring);rings.push(ring);const b=createDie(world);bodies.push(b);}
   reset();
   function roll(ids:number[],id:number){active=ids;rollId=id;start=performance.now();lastNudge=start;rolling=true;
@@ -58,5 +56,5 @@ outgoingLight = mix(vec3(tableLightness), outgoingLight, 0.45) * 0.22;
  },[]);
  useEffect(()=>{if(props.game.phase==='rolling')controller.current?.roll(props.game.dice.map((_,i)=>i).filter(i=>!props.game.locked.includes(i)),props.game.rollId);else if(props.game.phase==='ready'&&props.game.round===1&&props.game.player===0)controller.current?.reset();},[props.game.rollId,props.game.phase]);
  useEffect(()=>controller.current?.highlight(),[props.game.selected,props.game.locked]);
- return <><div ref={mount} className="dice-canvas"/>{props.game.dice.map((v,i)=><button key={i} ref={el=>{buttons.current[i]=el;}} className={`dice-hit ${props.game.selected.includes(i)?"is-selected":""}`} aria-label={`Кубик ${i+1}: ${v}${props.game.locked.includes(i)?", відкладений":""}`} aria-pressed={props.game.selected.includes(i)} disabled={!props.interactive||props.game.locked.includes(i)} onClick={()=>props.onSelect(i)}>{props.game.selected.includes(i)&&<span className="selection-seal" aria-hidden="true"><Check size={17} strokeWidth={3}/></span>}</button>)}{error&&<div className="graphics-error" role="alert">Не вдалося запустити 3D. Спробуйте браузер із підтримкою WebGL або ввімкніть апаратне прискорення.</div>}</>;
+ return <><div ref={mount} className="dice-canvas"/>{props.game.dice.map((v,i)=><button key={i} ref={el=>{buttons.current[i]=el;}} className={`dice-hit ${props.game.selected.includes(i)?"is-selected":""}`} aria-label={`Кубик ${i+1}: ${v}${props.game.locked.includes(i)?", відкладений":""}`} aria-pressed={props.game.selected.includes(i)} disabled={!props.interactive||props.game.locked.includes(i)} onClick={()=>props.onSelect(i)}></button>)}{error&&<div className="graphics-error" role="alert">Не вдалося запустити 3D. Спробуйте браузер із підтримкою WebGL або ввімкніть апаратне прискорення.</div>}</>;
 }
