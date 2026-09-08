@@ -1,17 +1,36 @@
 import * as CANNON from 'cannon-es';
+import {Vector3} from 'three';
+import {ConvexHull} from 'three/addons/math/ConvexHull.js';
+export const DICE_RADIUS=.16;
 export const faceValues=[1,6,2,5,3,4];
 export const normals=[new CANNON.Vec3(1,0,0),new CANNON.Vec3(-1,0,0),new CANNON.Vec3(0,1,0),new CANNON.Vec3(0,-1,0),new CANNON.Vec3(0,0,1),new CANNON.Vec3(0,0,-1)];
 export function upperFace(q:CANNON.Quaternion){let best=-2,index=0;normals.forEach((n,i)=>{const y=q.vmult(n).y;if(y>best){best=y;index=i;}});return {value:faceValues[index],alignment:best};}
 export const PHYSICS_STEP=1/120;
 const woodMaterial=new CANNON.Material('wood');
 const boneMaterial=new CANNON.Material('bone');
-// Narrow edge relief leaves large, stable scoring faces.
+// Sample spherical corners around a smaller cube, retaining six broad flat faces.
+// Merge coplanar hull triangles so contacts use continuous faces.
 export function diceShape(){
- const a=.475,b=.463,vertices:CANNON.Vec3[]=[];
- for(let axis=0;axis<3;axis++)for(const x of [-1,1])for(const y of [-1,1])for(const z of [-1,1]){const p=[b*x,b*y,b*z];p[axis]=a*[x,y,z][axis];vertices.push(new CANNON.Vec3(...p));}
- const directions:CANNON.Vec3[]=[];
- for(let x=-1;x<=1;x++)for(let y=-1;y<=1;y++)for(let z=-1;z<=1;z++)if(x||y||z)directions.push(new CANNON.Vec3(x,y,z).unit());
- const faces=directions.map(n=>{const support=Math.max(...vertices.map(v=>v.dot(n)));const ids=vertices.map((_,i)=>i).filter(i=>support-vertices[i].dot(n)<1e-6);const center=new CANNON.Vec3();ids.forEach(i=>center.vadd(vertices[i],center));center.scale(1/ids.length,center);const u=n.cross(Math.abs(n.x)<.9?new CANNON.Vec3(1,0,0):new CANNON.Vec3(0,1,0)).unit();const v=n.cross(u);return ids.sort((i,j)=>{const p=vertices[i].vsub(center),q=vertices[j].vsub(center);return Math.atan2(p.dot(v),p.dot(u))-Math.atan2(q.dot(v),q.dot(u));});});
+ const core=.475-DICE_RADIUS,points:Vector3[]=[];
+ for(const sx of [-1,1])for(const sy of [-1,1])for(const sz of [-1,1]){
+  for(let x=0;x<=1;x++)for(let y=0;y<=1;y++)for(let z=0;z<=1;z++){
+   if(!x&&!y&&!z)continue;
+   const n=new Vector3(x*sx,y*sy,z*sz).normalize();
+   points.push(n.multiplyScalar(DICE_RADIUS).add(new Vector3(sx*core,sy*core,sz*core)));
+  }
+ }
+ const hull=new ConvexHull().setFromPoints(points),vertices:CANNON.Vec3[]=[],indices=new Map<string,number>();
+ const planes=new Map<string,{normal:Vector3,ids:Set<number>}>();
+ for(const face of hull.faces){
+  const key=[face.normal.x,face.normal.y,face.normal.z,face.constant].map(v=>v.toFixed(6)).join(',');
+  let plane=planes.get(key);if(!plane){plane={normal:face.normal.clone(),ids:new Set()};planes.set(key,plane);}
+  let edge=face.edge;do{const p=edge.head().point,k=p.toArray().map(v=>v.toFixed(6)).join(',');let id=indices.get(k);if(id===undefined){id=vertices.length;indices.set(k,id);vertices.push(new CANNON.Vec3(p.x,p.y,p.z));}plane.ids.add(id);edge=edge.next;}while(edge!==face.edge);
+ }
+ const faces=[...planes.values()].map(({normal,ids})=>{
+  const n=new CANNON.Vec3(normal.x,normal.y,normal.z),center=new CANNON.Vec3();ids.forEach(i=>center.vadd(vertices[i],center));center.scale(1/ids.size,center);
+  const u=n.cross(Math.abs(n.x)<.9?new CANNON.Vec3(1,0,0):new CANNON.Vec3(0,1,0)).unit(),v=n.cross(u);
+  return [...ids].sort((i,j)=>{const p=vertices[i].vsub(center),q=vertices[j].vsub(center);return Math.atan2(p.dot(v),p.dot(u))-Math.atan2(q.dot(v),q.dot(u));});
+ });
  return new CANNON.ConvexPolyhedron({vertices,faces});
 }
 export function createWorld(){const world=new CANNON.World({gravity:new CANNON.Vec3(0,-60,0),allowSleep:true});(world.solver as CANNON.GSSolver).iterations=20;

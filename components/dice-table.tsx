@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 import * as CANNON from 'cannon-es';
 import type {Game} from '@/lib/game';
-import {faceValues,normals,upperFace,createWorld,createDie,launchDie,nudgeTilted,PHYSICS_STEP} from '@/lib/physics';
+import {faceValues,normals,upperFace,createWorld,createDie,launchDie,nudgeTilted,PHYSICS_STEP,DICE_RADIUS} from '@/lib/physics';
 function pipTexture(value:number){const canvas=document.createElement('canvas');canvas.width=canvas.height=256;const ctx=canvas.getContext('2d')!;ctx.fillStyle='#eadfbd';ctx.fillRect(0,0,256,256);for(let i=0;i<1800;i++){ctx.fillStyle=`rgba(113,81,43,${Math.random()*.08})`;ctx.fillRect(Math.random()*256,Math.random()*256,Math.random()*3+1,1);}const pips:Record<number,number[][]>={1:[[0,0]],2:[[-1,-1],[1,1]],3:[[-1,-1],[0,0],[1,1]],4:[[-1,-1],[-1,1],[1,-1],[1,1]],5:[[-1,-1],[-1,1],[0,0],[1,-1],[1,1]],6:[[-1,-1],[-1,0],[-1,1],[1,-1],[1,0],[1,1]]};pips[value].forEach(([x,y])=>{ctx.beginPath();ctx.arc(128+x*63,128+y*63,value===1?24:19,0,Math.PI*2);ctx.fillStyle=value===1?'#823c29':'#30271f';ctx.fill();ctx.beginPath();ctx.arc(126+x*63,126+y*63,14,Math.PI,Math.PI*1.8);ctx.strokeStyle='#100b0766';ctx.lineWidth=3;ctx.stroke();});const t=new THREE.CanvasTexture(canvas);t.colorSpace=THREE.SRGBColorSpace;return t;}
 function woodTexture(){const texture=new THREE.TextureLoader().load('/textures/tavern-oak.jpg');texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=4;return texture;}
 type Props={game:Game;onResult:(v:Record<number,number>,rollId:number)=>void;onSelect:(id:number)=>void;interactive:boolean};
@@ -20,7 +20,7 @@ export default function DiceTable(props:Props){
   const scene=new THREE.Scene();const camera=new THREE.OrthographicCamera(-7,7,5,-5,.1,100);camera.up.set(0,0,-1);camera.position.set(0,20,0);camera.lookAt(0,0,0);
   scene.add(new THREE.HemisphereLight(0xffe6c7,0x302031,2.5));const light=new THREE.DirectionalLight(0xffcd86,3.2);light.position.set(-3,16,3);light.castShadow=true;light.shadow.mapSize.set(1024,1024);Object.assign(light.shadow.camera,{left:-9,right:9,top:9,bottom:-9,near:.5,far:25});light.shadow.bias=-.001;scene.add(light);const fill=new THREE.PointLight(0xff8e36,12,20);fill.position.set(7,3,-4);scene.add(fill);
   const world=createWorld();
-  const textures=faceValues.map(pipTexture),wood=woodTexture();const geometry=new RoundedBoxGeometry(.95,.95,.95,3,.025);
+  const textures=faceValues.map(pipTexture),wood=woodTexture();const geometry=new RoundedBoxGeometry(.95,.95,.95,5,DICE_RADIUS);
   const rings:THREE.Group[]=[];const meshes:THREE.Mesh<THREE.BufferGeometry,THREE.MeshStandardMaterial[]>[]=[];const bodies:CANNON.Body[]=[];
   const boardMat=new THREE.MeshStandardMaterial({map:wood,roughness:.92,color:0xffffff});boardMat.onBeforeCompile=(shader)=>{shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',`#include <map_fragment>
 float woodLuminance = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
