@@ -26,8 +26,8 @@ export default function DiceTable(props:Props){
 float woodLuminance = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
 vec3 mutedWood = mix(vec3(woodLuminance), diffuseColor.rgb, 0.25);
 diffuseColor.rgb = mix(vec3(0.26), mutedWood, 0.38) * 0.42;`);shader.fragmentShader=shader.fragmentShader.replace('#include <opaque_fragment>',`float tableLightness = dot(outgoingLight, vec3(0.2126, 0.7152, 0.0722));
-outgoingLight = mix(vec3(tableLightness), outgoingLight, 0.45) * 0.18;
-#include <opaque_fragment>`);};boardMat.customProgramCacheKey=()=> 'dark-walnut-contrast-v3';const edgeMat=new THREE.MeshStandardMaterial({color:0x714526,roughness:.7});const brass=new THREE.MeshStandardMaterial({color:0xd5a14d,metalness:.65,roughness:.48});
+outgoingLight = mix(vec3(tableLightness), outgoingLight, 0.45) * 0.22;
+#include <opaque_fragment>`);};boardMat.customProgramCacheKey=()=> 'dark-walnut-contrast-v4';const edgeMat=new THREE.MeshStandardMaterial({color:0x714526,roughness:.7});const brass=new THREE.MeshStandardMaterial({color:0xd5a14d,metalness:.65,roughness:.48});
   function box(w:number,h:number,d:number,x:number,y:number,z:number,m:THREE.Material,solid=false){const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);mesh.position.set(x,y,z);mesh.receiveShadow=true;mesh.castShadow=true;scene.add(mesh);if(solid){const b=new CANNON.Body({mass:0,shape:new CANNON.Box(new CANNON.Vec3(w/2,h/2,d/2))});b.position.set(x,y,z);world.addBody(b);}return mesh;}
   wood.wrapS=wood.wrapT=THREE.RepeatWrapping;wood.repeat.set(5,5);box(90,.45,65,0,-.225,0,boardMat);
   let rolling=false,active:number[]=[],rollId=0,start=0,lastNudge=0;
