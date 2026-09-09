@@ -3,12 +3,15 @@ import { useEffect, useReducer, useRef, useState } from 'react';
 import { Dice1, Dice2, Dice3, Dice4, Dice5, Dice6, Dices, BookOpen, RotateCcw, Shield, Crown, ArrowRight, Check, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog';
 import DiceTable from '@/components/dice-table';
-import { gameReducer, initialGame, scoreDice, selectionBreakdown, bestSelection, playerName, type Mode, type Game } from '@/lib/game';
+import { gameReducer, initialGame, scoreDice, selectionBreakdown, playerName, type Mode, type Game } from '@/lib/game';
+import {opponents,opponentInfo,type OpponentId} from '@/lib/opponents';
+import {botSelection,botShouldBank} from '@/lib/bot';
 const number=(n:number)=>n.toLocaleString('uk-UA');
 
 export default function Home(){
  const [game,dispatch]=useReducer(gameReducer,undefined,()=>initialGame());
  const [rules,setRules]=useState(false),[menu,setMenu]=useState(false),[newMode,setNewMode]=useState<Mode|null>(null);
+ const [chosenOpponent,setChosenOpponent]=useState<OpponentId>('innkeeper');
  const gameRef=useRef(game);gameRef.current=game;
  const isBot=game.mode==='bot'&&game.player===1;
  const selectedScore=scoreDice(game.selected.map(i=>game.dice[i]));
@@ -17,15 +20,15 @@ export default function Home(){
  const nextName=playerName(game,1-game.player);
  const selectedInvalid=game.selected.length>0&&!selectedScore;
  const fresh=game.scores.every(n=>n===0)&&game.phase==='ready'&&game.round===1&&game.player===0;
- const requestNew=(mode:Mode)=>{if(fresh)dispatch({type:'new',mode});else setNewMode(mode);};
+ const requestNew=(mode:Mode,opponent:OpponentId=game.opponent)=>{setChosenOpponent(opponent);if(fresh)dispatch({type:'new',mode,opponent});else setNewMode(mode);};
  useEffect(()=>{
   if(rules||newMode||menu)return;
   let fn:(()=>void)|undefined;
   if(game.phase==='handoff'||game.phase==='bust')fn=()=>dispatch({type:'next'});
   else if(isBot&&game.phase==='ready')fn=()=>dispatch({type:'roll'});
   else if(isBot&&game.phase==='choose'){
-   if(!game.selected.length)fn=()=>dispatch({type:'select',ids:bestSelection(game.dice,game.locked).ids});
-   else{const total=game.pot+selectedScore;const remaining=6-game.locked.length-game.selected.length;const winning=game.scores[1]+total>=4000;const stop=winning||total>=700||(remaining<=2&&remaining>0&&total>=300);fn=()=>dispatch({type:stop?'bank':'roll'});}
+   if(!game.selected.length)fn=()=>dispatch({type:'select',ids:botSelection(game)});
+   else fn=()=>dispatch({type:botShouldBank(game)?'bank':'roll'});
   }
   if(fn){const id=setTimeout(fn,game.phase==='bust'?6000:game.phase==='handoff'?4500:1100);return ()=>clearTimeout(id);}
  },[game,isBot,selectedScore,rules,newMode,menu]);
@@ -38,12 +41,12 @@ export default function Home(){
   return ()=>lifecycle.abort();
  },[]);
  let instruction=game.message;
- if(game.phase==='choose')instruction=isBot?'Корчмар обмірковує наступний кидок…':selectedInvalid?'У виборі є кубики, що не дають очок.':selectedScore?`Вибрано: +${number(selectedScore)}. Забрати чи ризикнути?`:'Натисніть на кубики, що дають очки.';
- if(game.phase==='ready'&&isBot)instruction='Корчмар готується кидати…';
+ if(game.phase==='choose')instruction=isBot?`${playerName(game)} обмірковує наступний кидок…`:selectedInvalid?'У виборі є кубики, що не дають очок.':selectedScore?`Вибрано: +${number(selectedScore)}. Забрати чи ризикнути?`:'Натисніть на кубики, що дають очки.';
+ if(game.phase==='ready'&&isBot)instruction=`${playerName(game)} готується кидати…`;
  return <main className="game-screen">
  <DiceTable game={game} interactive={canChoose&&!rules&&!menu&&!newMode} onSelect={id=>dispatch({type:'toggle',id})} onResult={(values,rollId)=>dispatch({type:'rolled',values,rollId})}/>
  <PlayerScore game={game} p={1}/><PlayerScore game={game} p={0}/>
- <div className="game-status" role="status">{game.phase==='rolling'?'Кубики котяться…':isBot&&!game.result?'Хід корчмаря':game.phase==='choose'?(selectedInvalid?'Ця комбінація не дає очок':game.selected.length?'':'Виберіть кубики'):game.phase==='ready'?`Хід: ${playerName(game)}`:''}</div>
+ <div className="game-status" role="status">{game.phase==='rolling'?'Кубики котяться…':isBot&&!game.result?`Хід: ${playerName(game)}`:game.phase==='choose'?(selectedInvalid?'Ця комбінація не дає очок':game.selected.length?'':'Виберіть кубики'):game.phase==='ready'?`Хід: ${playerName(game)}`:''}</div>
  {canChoose&&selectedScore>0&&!rules&&!menu&&!newMode&&<aside className="selection-hint" role="status" aria-live="polite" aria-atomic="true">
  <span className="selection-hint-label">Залікова комбінація</span>
  <div key={game.selected.join(',')} className="selection-hint-content"><strong>+{number(selectedScore)} <small>очок</small></strong>
@@ -62,7 +65,7 @@ export default function Home(){
  <button className="utility" onClick={()=>setMenu(true)}><RotateCcw size={16}/> Меню</button>
  </nav>
  {game.result&&game.phase==='won'&&<TurnSummary key={`${game.rollId}-${game.phase}`} game={game} nextName={nextName} onNext={()=>dispatch({type:'next'})} onRestart={()=>dispatch({type:'new',mode:game.mode})}/>}
- <Dialog open={menu} onOpenChange={setMenu}><DialogContent className="game-dialog" showCloseButton={false}><DialogClose className="dialog-close" aria-label="Закрити меню"><X size={20}/></DialogClose><DialogTitle className="dialog-title">Корчма</DialogTitle><DialogDescription>Нова партія до 4 000 очок</DialogDescription><div className="menu-options"><button className="primary" onClick={()=>{setMenu(false);requestNew('bot');}}><Crown size={20}/> Проти корчмаря</button><button className="primary" onClick={()=>{setMenu(false);requestNew('hotseat');}}><Shield size={20}/> Удвох на одному пристрої</button><DialogClose className="secondary">Повернутися до гри</DialogClose></div></DialogContent></Dialog>
+ <Dialog open={menu} onOpenChange={setMenu}><DialogContent className="game-dialog" showCloseButton={false}><DialogClose className="dialog-close" aria-label="Закрити меню"><X size={20}/></DialogClose><DialogTitle className="dialog-title">Корчма</DialogTitle><DialogDescription>Нова партія до 4 000 очок</DialogDescription><div className="menu-options"><p className="opponent-fairness">Однакові кубики та шанси для всіх. Відрізняються лише рішення й готовність ризикувати.</p><div className="opponent-list">{opponents.map(o=><button key={o.id} className={`opponent-choice ${game.mode==='bot'&&game.opponent===o.id?'current-opponent':''}`} onClick={()=>{setMenu(false);requestNew('bot',o.id);}}><span className="opponent-title"><b>{o.name}</b><span>{o.level}</span></span><em>{o.character}</em><span className="opponent-description">{o.description}</span></button>)}</div><button className="primary" onClick={()=>{setMenu(false);requestNew('hotseat');}}><Shield size={20}/> Удвох на одному пристрої</button><DialogClose className="secondary">Повернутися до гри</DialogClose></div></DialogContent></Dialog>
  <Dialog open={rules} onOpenChange={setRules}><DialogContent className="game-dialog tavern-rules" showCloseButton={false}>
  <DialogClose className="dialog-close" aria-label="Закрити правила"><X size={20}/></DialogClose>
  <div className="rules-heading"><div className="rules-seal" aria-hidden="true"><Dices size={28}/></div><div><DialogTitle className="dialog-title">Правила корчми</DialogTitle><DialogDescription>Наберіть 4 000 очок, щоб перемогти.</DialogDescription></div></div>
@@ -78,7 +81,7 @@ export default function Home(){
  <div className="rules-tip"><b>Усі шість кубиків залікові?</b><p>Кидайте всі шість знову й продовжуйте накопичувати очки.</p></div>
  <p className="rules-footnote">Комбінації складаються лише з одного кидка. Відкладені кубики не додаються до нової комбінації.</p>
  <DialogClose className="primary rules-return">До столу <ArrowRight size={17}/></DialogClose></div></DialogContent></Dialog>
- <Dialog open={newMode!==null} onOpenChange={open=>{if(!open)setNewMode(null);}}><DialogContent className="game-dialog" showCloseButton={false}><DialogTitle className="dialog-title">Почати нову партію?</DialogTitle><DialogDescription>Поточний рахунок буде скинуто. Режим: {newMode==='bot'?'проти корчмаря':'удвох на одному пристрої'}.</DialogDescription><div className="dialog-actions"><button className="secondary" onClick={()=>setNewMode(null)}>Продовжити гру</button><button className="primary" onClick={()=>{dispatch({type:'new',mode:newMode!});setNewMode(null);}}>Нова партія</button></div></DialogContent></Dialog>
+ <Dialog open={newMode!==null} onOpenChange={open=>{if(!open)setNewMode(null);}}><DialogContent className="game-dialog" showCloseButton={false}><DialogTitle className="dialog-title">Почати нову партію?</DialogTitle><DialogDescription>Поточний рахунок буде скинуто. Режим: {newMode==='bot'?`суперник — ${opponentInfo(chosenOpponent).name}`:'удвох на одному пристрої'}.</DialogDescription><div className="dialog-actions"><button className="secondary" onClick={()=>setNewMode(null)}>Продовжити гру</button><button className="primary" onClick={()=>{dispatch({type:'new',mode:newMode!,opponent:chosenOpponent});setNewMode(null);}}>Нова партія</button></div></DialogContent></Dialog>
  </main>
 }
 function PlayerScore({game,p}:{game:Game;p:number}){const active=game.player===p;return <section className={`score-note ${p===0?'near':'far'} ${active?'active':''} ${game.result?.player===p&&game.result.earned?'score-earned':''}`} aria-label={`Рахунок: ${playerName(game,p)}`}><h2>{playerName(game,p)}{active&&<span className="turn-mark" aria-hidden="true">◆</span>}</h2>{active&&<div className="active-turn-label">{p===0&&game.mode==='bot'?'Ваш хід':'Зараз грає'}</div>}<div className="total-line"><span>Рахунок / 4000</span><strong>{game.result?.player===p?<CountUp key={`${game.rollId}-${game.phase}`} from={game.result.before} to={game.result.after}/>:number(game.scores[p])}</strong></div><dl><div><dt>За хід</dt><dd>{active?number(game.pot):0}</dd></div><div><dt>Вибрано</dt><dd>{active?number(scoreDice(game.selected.map(i=>game.dice[i]))):0}</dd></div></dl></section>}

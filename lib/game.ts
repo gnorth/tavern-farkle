@@ -1,7 +1,8 @@
+import {opponentInfo,type OpponentId} from './opponents.ts';
 export type Mode='bot'|'hotseat';
 export type Phase='ready'|'rolling'|'choose'|'bust'|'handoff'|'won';
 export type TurnResult={player:number;earned:number;lost:number;before:number;after:number};
-export type Game={result:TurnResult|null;mode:Mode;phase:Phase;player:number;scores:number[];pot:number;dice:number[];locked:number[];selected:number[];rollId:number;round:number;message:string;winner:number|null};
+export type Game={opponent:OpponentId;result:TurnResult|null;mode:Mode;phase:Phase;player:number;scores:number[];pot:number;dice:number[];locked:number[];selected:number[];rollId:number;round:number;message:string;winner:number|null};
 export function scoreDice(dice:number[]):number{
  if(!dice.length || dice.some(v=>!Number.isInteger(v)||v<1||v>6))return 0;
  const counts=Array(7).fill(0);dice.forEach(v=>counts[v]++);
@@ -19,11 +20,11 @@ export function bestSelection(dice:number[],locked:number[]=[]){
  for(let mask=1;mask<1<<available.length;mask++){const ids=available.filter((_,i)=>mask&(1<<i));const n=scoreDice(ids.map(i=>dice[i]));if(n>score||(n===score&&n>0&&ids.length>best.length)){score=n;best=ids;}}
  return {ids:best,score};
 }
-export const playerName=(g:Game,p=g.player)=>p===0?(g.mode==='bot'?'Ви':'Гравець 1'):(g.mode==='bot'?'Корчмар':'Гравець 2');
-export function initialGame(mode:Mode='bot',rollId=0):Game{return {result:null,mode,phase:'ready',player:0,scores:[0,0],pot:0,dice:[1,2,3,4,5,6],locked:[],selected:[],rollId,round:1,message:'Кидайте кубики, щоб почати партію.',winner:null};}
-export type Action={type:'new';mode:Mode}|{type:'roll'}|{type:'rolled';values:Record<number,number>;rollId:number}|{type:'select';ids:number[]}|{type:'toggle';id:number}|{type:'bank'}|{type:'next'};
+export const playerName=(g:Game,p=g.player)=>p===0?(g.mode==='bot'?'Ви':'Гравець 1'):(g.mode==='bot'?opponentInfo(g.opponent).name:'Гравець 2');
+export function initialGame(mode:Mode='bot',rollId=0,opponent:OpponentId='innkeeper'):Game{return {opponent,result:null,mode,phase:'ready',player:0,scores:[0,0],pot:0,dice:[1,2,3,4,5,6],locked:[],selected:[],rollId,round:1,message:'Кидайте кубики, щоб почати партію.',winner:null};}
+export type Action={type:'new';mode:Mode;opponent?:OpponentId}|{type:'roll'}|{type:'rolled';values:Record<number,number>;rollId:number}|{type:'select';ids:number[]}|{type:'toggle';id:number}|{type:'bank'}|{type:'next'};
 export function gameReducer(g:Game,a:Action):Game{
- if(a.type==='new')return initialGame(a.mode,g.rollId+1);
+ if(a.type==='new')return initialGame(a.mode,g.rollId+1,a.opponent??g.opponent);
  if(a.type==='roll'){
   if(g.phase!=='ready'&&g.phase!=='choose')return g;
   const value=scoreDice(g.selected.map(i=>g.dice[i]));if(g.phase==='choose'&&!value)return g;
