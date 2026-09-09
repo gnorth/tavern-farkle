@@ -1,10 +1,29 @@
 import * as CANNON from 'cannon-es';
+import {secureRandom,uniformInt} from './random.ts';
 import {Vector3} from 'three';
 import {ConvexHull} from 'three/addons/math/ConvexHull.js';
 export const DICE_RADIUS=.16;
 export const faceValues=[1,6,2,5,3,4];
 export const normals=[new CANNON.Vec3(1,0,0),new CANNON.Vec3(-1,0,0),new CANNON.Vec3(0,1,0),new CANNON.Vec3(0,-1,0),new CANNON.Vec3(0,0,1),new CANNON.Vec3(0,0,-1)];
 export function upperFace(q:CANNON.Quaternion){let best=-2,index=0;normals.forEach((n,i)=>{const y=q.vmult(n).y;if(y>best){best=y;index=i;}});return {value:faceValues[index],alignment:best};}
+// A cube has 24 rotational symmetries. Randomize the numbered shell before
+// each throw, independently of the unlabelled collision body's trajectory.
+// For ANY resting body face, each number occurs in exactly 4 of the 24 poses.
+// The same shell quaternion is rendered throughout the throw and read at rest.
+const shellRotations=new WeakMap<CANNON.Body,CANNON.Quaternion>();
+export function cubeSymmetry(index:number){
+ if(!Number.isInteger(index)||index<0||index>=24)throw new Error('Invalid cube symmetry');
+ const up=new CANNON.Vec3(0,1,0),align=new CANNON.Quaternion(),yaw=new CANNON.Quaternion();
+ align.setFromVectors(normals[Math.floor(index/4)],up);yaw.setFromAxisAngle(up,index%4*Math.PI/2);
+ return yaw.mult(align).normalize();
+}
+export function clearShellRotation(b:CANNON.Body){shellRotations.delete(b);}
+export function setShellRotation(b:CANNON.Body,index:number){shellRotations.set(b,cubeSymmetry(index));}
+export function visibleQuaternion(b:CANNON.Body,interpolated=false){
+ const q=interpolated?b.interpolatedQuaternion:b.quaternion,shell=shellRotations.get(b);
+ return shell?q.mult(shell):q;
+}
+export function rolledFace(b:CANNON.Body){return upperFace(visibleQuaternion(b));}
 export const PHYSICS_STEP=1/120;
 const woodMaterial=new CANNON.Material('wood');
 const boneMaterial=new CANNON.Material('bone');
@@ -48,12 +67,13 @@ export function createWorld(){const world=new CANNON.World({gravity:new CANNON.V
  return world;
 }
 export function createDie(world:CANNON.World){const b=new CANNON.Body({mass:2.8,material:boneMaterial,shape:diceShape(),linearDamping:.18,angularDamping:.32,allowSleep:true,sleepSpeedLimit:.10,sleepTimeLimit:.5});world.addBody(b);return b;}
-export function launchDie(b:CANNON.Body,j:number,random:()=>number=Math.random){
+export function launchDie(b:CANNON.Body,j:number,random:()=>number=secureRandom){
+ setShellRotation(b,uniformInt(24));
  recoveryAttempts.delete(b);b.type=CANNON.Body.DYNAMIC;b.updateMassProperties();b.wakeUp();
  const row=Math.floor(j/3),lane=j%3-1;
  b.position.set(lane*1.65,1.2+row*1.6,3.5);
  awaitingLanding.add(b);
- // Uniform random orientation; outcomes still come solely from the physical resting face.
+ // Physical tumbling is independent of the numbered shell orientation.
  const u=random(),v=random()*2*Math.PI,w=random()*2*Math.PI;b.quaternion.set(Math.sqrt(1-u)*Math.sin(v),Math.sqrt(1-u)*Math.cos(v),Math.sqrt(u)*Math.sin(w),Math.sqrt(u)*Math.cos(w));
  // Solve the flight to a spread of landing points around the table center.
  const up=2+random()*.3,flight=(up+Math.sqrt(up*up+120*(b.position.y-.7)))/60;
