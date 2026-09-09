@@ -61,7 +61,7 @@ export default function Home(){
  {game.result.lost>0?<strong>Згоріло {number(game.result.lost)} очок за хід</strong>:<strong>За цей хід — 0 очок</strong>}
  <p className="bust-safe">Загальний рахунок збережено.</p>
  </div>}
- <nav className="game-actions" aria-label="Дії гри">
+ <nav className={`game-actions ${game.phase==='choose'&&!isBot?'has-choice':''}`} aria-label="Дії гри">
  <button className="utility" onClick={()=>setRules(true)}><BookOpen size={16}/> Правила</button>
  {game.phase==='ready'&&!isBot&&<button className="main-action" onClick={()=>dispatch({type:'roll'})}><Dices size={19}/> Кинути кубики</button>}
  {game.phase==='choose'&&!isBot&&<><button disabled={!selectedScore} onClick={()=>dispatch({type:'roll'})}><Dices size={18}/>{game.selected.length+game.locked.length===6?'Кинути всі 6':'Зарахувати й кинути'}</button><button className="main-action" disabled={!selectedScore} onClick={()=>dispatch({type:'bank'})}><Check size={18}/>Забрати {number(game.pot+selectedScore)}</button></>}
