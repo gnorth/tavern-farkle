@@ -78,6 +78,7 @@ export default function Home(){
  <div className="portrait-copy"><h3>{o.name}</h3><div className="portrait-level"><span className="level-marks" aria-hidden="true">{[0,1,2,3].map(n=><i key={n} className={n<({apprentice:1,innkeeper:2,mercenary:3,merchant:4}[o.id])?'filled':''}/>)}</span>{o.level}</div><p>{o.description}</p></div>
  </button>)}</div>:<div className="hotseat-intro"><Shield size={38}/><h3>Один стіл. Двоє гравців.</h3><p>Кидайте по черзі на одному пристрої. Підсвічена картка показує, чий зараз хід.</p></div>}
  <footer className="opponent-menu-footer"><p>Однакові кубики й шанси для всіх.<br/><span>Характер змінює рішення, а не удачу.</span></p><button className="primary start-match" onClick={()=>{setMenu(false);requestNew(chosenMode,chosenOpponent);}}>Грати до {number(chosenTarget)} <ArrowRight size={18}/></button></footer>
+ <button className="secondary restart-match" onClick={()=>{setChosenOpponent(game.opponent);setChosenTarget(game.target);setChosenMode(game.mode);setMenu(false);setNewMode(game.mode);}}><RotateCcw size={18}/> Почати заново</button>
  <DialogClose className="menu-resume">Повернутися до поточної гри</DialogClose>
  </DialogContent></Dialog>
  <Dialog open={rules} onOpenChange={setRules}><DialogContent className="game-dialog tavern-rules" showCloseButton={false}>

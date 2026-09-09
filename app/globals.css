@@ -109,3 +109,5 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 @media(max-width:380px) and (orientation:portrait){.score-identity h2{font-size:14px!important}.score-avatar{width:28px;flex-basis:28px}.score-note{padding:9px 8px}.total-line>span{font-size:13px}.total-line strong{font-size:24px}.game-actions button{font-size:14px}.portrait-copy h3{font-size:20px}}
 @media(max-height:650px) and (orientation:portrait){.game-screen{--hint-height:64px;--controls-height:104px}.selection-hint-label{display:none}}
 @media(max-height:360px) and (orientation:landscape){.score-note{padding:6px 8px}.score-note>.active-turn-label{position:absolute;right:6px;top:39px}.total-line{margin-top:18px}.score-identity{margin:0}.score-note dl>div{flex-direction:row;align-items:center;gap:4px}.score-note dt{font-size:12px}.score-note dd{font-size:15px}.selection-hint-label{display:none}}
+
+.restart-match{width:100%;min-height:48px;font-size:16px}
