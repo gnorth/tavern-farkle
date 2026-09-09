@@ -18,7 +18,7 @@ export function botSelection(g:Game){
  for(let mask=1;mask<1<<available.length;mask++){
   const ids=available.filter((_,i)=>mask&(1<<i)),points=scoreDice(ids.map(i=>g.dice[i]));if(!points)continue;
   const total=g.pot+points,remaining=available.length-ids.length;
-  const value=g.scores[g.player]+total>=4000?1e6+total:Math.max(total,rollValue(total,remaining));
+  const value=g.scores[g.player]+total>=g.target?1e6+total:Math.max(total,rollValue(total,remaining));
   if(value>best){best=value;choice=ids;}
  }
  return choice;
@@ -26,14 +26,14 @@ export function botSelection(g:Game){
 export function botShouldBank(g:Game){
  const points=scoreDice(g.selected.map(i=>g.dice[i]));if(!points)return false;
  const total=g.pot+points,remaining=6-g.locked.length-g.selected.length;
- if(g.scores[g.player]+total>=4000)return true;
+ if(g.scores[g.player]+total>=g.target)return true;
  switch(g.opponent){
   case 'apprentice':return total>=250||(remaining>0&&remaining<=3);
   case 'innkeeper':return total>=700||(remaining>0&&remaining<=2&&total>=300);
   case 'mercenary':return total>=1200||(remaining===1&&total>=650)||(remaining===2&&total>=900);
   case 'merchant':{
    const behind=g.scores[1-g.player]-g.scores[g.player];
-   const urgency=g.scores[1-g.player]>=3200&&behind>500;
+   const urgency=g.scores[1-g.player]>=g.target*.8&&behind>g.target*.125;
    return rollValue(total,remaining)<=total*(urgency?.90:1.03);
   }
  }

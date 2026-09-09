@@ -19,3 +19,18 @@ test('selection hint explains only valid scoring combinations',()=>{
  assert.deepEqual(selectionBreakdown([1,2]),[]);
  for(const dice of [[1,5],[1,1,2,3,4,5],[2,3,4,5,6],[1,1,1,1],[5,5,5,5,5,5]])assert.equal(selectionBreakdown(dice).reduce((n,p)=>n+p.points,0),scoreDice(dice));
 });
+test('all match targets govern victory in both modes and persist on restart',()=>{
+ for(const mode of ['bot','hotseat'] as const)for(const target of [4000,6000,8000] as const){
+  let g=initialGame(mode,0,'merchant',target);g.scores=[target-150,0];
+  g=roll(g,[1,2,3,4,6,6]);g=gameReducer(g,{type:'toggle',id:0});g=gameReducer(g,{type:'bank'});
+  assert.equal(g.phase,'handoff');assert.equal(g.target,target);
+  const restart=gameReducer(g,{type:'new',mode});assert.equal(restart.target,target);assert.equal(restart.opponent,'merchant');
+  g={...g,phase:'choose',selected:[0],pot:0};g=gameReducer(g,{type:'bank'});assert.equal(g.phase,'won');
+  assert.equal(g.scores[0],target+50);
+ }
+});
+test('new match can select target without changing an ongoing match',()=>{
+ const g=initialGame('bot',0,'innkeeper',4000);
+ const next=gameReducer(g,{type:'new',mode:'hotseat',target:8000,opponent:'apprentice'});
+ assert.equal(g.target,4000);assert.equal(next.target,8000);assert.deepEqual(next.scores,[0,0]);
+});

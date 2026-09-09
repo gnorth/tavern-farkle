@@ -1,8 +1,10 @@
 import {opponentInfo,type OpponentId} from './opponents.ts';
+export const scoreTargets=[4000,6000,8000] as const;
+export type ScoreTarget=typeof scoreTargets[number];
 export type Mode='bot'|'hotseat';
 export type Phase='ready'|'rolling'|'choose'|'bust'|'handoff'|'won';
 export type TurnResult={player:number;earned:number;lost:number;before:number;after:number};
-export type Game={opponent:OpponentId;result:TurnResult|null;mode:Mode;phase:Phase;player:number;scores:number[];pot:number;dice:number[];locked:number[];selected:number[];rollId:number;round:number;message:string;winner:number|null};
+export type Game={target:ScoreTarget;opponent:OpponentId;result:TurnResult|null;mode:Mode;phase:Phase;player:number;scores:number[];pot:number;dice:number[];locked:number[];selected:number[];rollId:number;round:number;message:string;winner:number|null};
 export function scoreDice(dice:number[]):number{
  if(!dice.length || dice.some(v=>!Number.isInteger(v)||v<1||v>6))return 0;
  const counts=Array(7).fill(0);dice.forEach(v=>counts[v]++);
@@ -21,10 +23,10 @@ export function bestSelection(dice:number[],locked:number[]=[]){
  return {ids:best,score};
 }
 export const playerName=(g:Game,p=g.player)=>p===0?(g.mode==='bot'?'Ви':'Гравець 1'):(g.mode==='bot'?opponentInfo(g.opponent).name:'Гравець 2');
-export function initialGame(mode:Mode='bot',rollId=0,opponent:OpponentId='innkeeper'):Game{return {opponent,result:null,mode,phase:'ready',player:0,scores:[0,0],pot:0,dice:[1,2,3,4,5,6],locked:[],selected:[],rollId,round:1,message:'Кидайте кубики, щоб почати партію.',winner:null};}
-export type Action={type:'new';mode:Mode;opponent?:OpponentId}|{type:'roll'}|{type:'rolled';values:Record<number,number>;rollId:number}|{type:'select';ids:number[]}|{type:'toggle';id:number}|{type:'bank'}|{type:'next'};
+export function initialGame(mode:Mode='bot',rollId=0,opponent:OpponentId='innkeeper',target:ScoreTarget=4000):Game{return {target:scoreTargets.includes(target)?target:4000,opponent,result:null,mode,phase:'ready',player:0,scores:[0,0],pot:0,dice:[1,2,3,4,5,6],locked:[],selected:[],rollId,round:1,message:'Кидайте кубики, щоб почати партію.',winner:null};}
+export type Action={type:'new';mode:Mode;opponent?:OpponentId;target?:ScoreTarget}|{type:'roll'}|{type:'rolled';values:Record<number,number>;rollId:number}|{type:'select';ids:number[]}|{type:'toggle';id:number}|{type:'bank'}|{type:'next'};
 export function gameReducer(g:Game,a:Action):Game{
- if(a.type==='new')return initialGame(a.mode,g.rollId+1,a.opponent??g.opponent);
+ if(a.type==='new')return initialGame(a.mode,g.rollId+1,a.opponent??g.opponent,a.target??g.target);
  if(a.type==='roll'){
   if(g.phase!=='ready'&&g.phase!=='choose')return g;
   const value=scoreDice(g.selected.map(i=>g.dice[i]));if(g.phase==='choose'&&!value)return g;
@@ -41,7 +43,7 @@ export function gameReducer(g:Game,a:Action):Game{
  if(a.type==='select'&&g.phase==='choose'&&a.ids.every(i=>Number.isInteger(i)&&i>=0&&i<6&&!g.locked.includes(i)))return {...g,selected:[...new Set(a.ids)]};
  if(a.type==='bank'&&g.phase==='choose'){
   const score=scoreDice(g.selected.map(i=>g.dice[i]));if(!score)return g;
-  const earned=g.pot+score;const scores=g.scores.map((v,i)=>i===g.player?v+earned:v);const won=scores[g.player]>=4000;
+  const earned=g.pot+score;const scores=g.scores.map((v,i)=>i===g.player?v+earned:v);const won=scores[g.player]>=g.target;
   return {...g,result:{player:g.player,earned,lost:0,before:g.scores[g.player],after:scores[g.player]},scores,pot:0,selected:[],locked:[],phase:won?'won':'handoff',winner:won?g.player:null,message:won?`${playerName(g)} — перемога!`:`${playerName(g)}: +${earned} очок до рахунку.`};
  }
  if(a.type==='next'&&(g.phase==='bust'||g.phase==='handoff'))return {...g,result:null,player:1-g.player,phase:'ready',pot:0,locked:[],selected:[],round:g.round+(g.player===1?1:0),message:'Ваш хід. Кидайте кубики.'};

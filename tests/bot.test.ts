@@ -26,3 +26,9 @@ test('cautious, balanced and daring opponents make distinct risk decisions',()=>
 test('every opponent banks a winning selection and survives restart with correct identity',()=>{
  for(const o of opponents){const g={...choice(o.id),scores:[3000,3950],selected:[0]};assert.equal(botShouldBank(g),true);const reset=gameReducer(g,{type:'new',mode:'bot'});assert.equal(reset.opponent,o.id);assert.equal(playerName({...reset,player:1}),o.name);}
 });
+test('bots use the configured victory target, never the old 4000 constant',()=>{
+ for(const opponent of opponents)for(const target of [4000,6000,8000] as const){
+  const g={...choice(opponent.id),target,scores:[0,target-50],selected:[0]};assert.equal(botShouldBank(g),true);
+ }
+ const extended={...choice('innkeeper'),target:8000 as const,scores:[0,3950],selected:[0]};assert.equal(botShouldBank(extended),false);
+});

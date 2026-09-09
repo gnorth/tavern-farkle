@@ -3,7 +3,7 @@ import { useEffect, useReducer, useRef, useState } from 'react';
 import { Dice1, Dice2, Dice3, Dice4, Dice5, Dice6, Dices, BookOpen, RotateCcw, Shield, Crown, ArrowRight, Check, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog';
 import DiceTable from '@/components/dice-table';
-import { gameReducer, initialGame, scoreDice, selectionBreakdown, playerName, type Mode, type Game } from '@/lib/game';
+import { gameReducer, initialGame, scoreDice, selectionBreakdown, playerName, scoreTargets, type ScoreTarget, type Mode, type Game } from '@/lib/game';
 import {opponents,opponentInfo,type OpponentId} from '@/lib/opponents';
 import {botSelection,botShouldBank} from '@/lib/bot';
 const number=(n:number)=>n.toLocaleString('uk-UA');
@@ -12,6 +12,9 @@ export default function Home(){
  const [game,dispatch]=useReducer(gameReducer,undefined,()=>initialGame());
  const [rules,setRules]=useState(false),[menu,setMenu]=useState(false),[newMode,setNewMode]=useState<Mode|null>(null);
  const [chosenOpponent,setChosenOpponent]=useState<OpponentId>('innkeeper');
+ const [chosenTarget,setChosenTarget]=useState<ScoreTarget>(4000);
+ const [chosenMode,setChosenMode]=useState<Mode>('bot');
+ const openMenu=()=>{setChosenOpponent(game.opponent);setChosenTarget(game.target);setChosenMode(game.mode);setMenu(true);};
  const gameRef=useRef(game);gameRef.current=game;
  const isBot=game.mode==='bot'&&game.player===1;
  const selectedScore=scoreDice(game.selected.map(i=>game.dice[i]));
@@ -20,7 +23,7 @@ export default function Home(){
  const nextName=playerName(game,1-game.player);
  const selectedInvalid=game.selected.length>0&&!selectedScore;
  const fresh=game.scores.every(n=>n===0)&&game.phase==='ready'&&game.round===1&&game.player===0;
- const requestNew=(mode:Mode,opponent:OpponentId=game.opponent)=>{setChosenOpponent(opponent);if(fresh)dispatch({type:'new',mode,opponent});else setNewMode(mode);};
+ const requestNew=(mode:Mode,opponent:OpponentId=game.opponent)=>{setChosenOpponent(opponent);if(fresh)dispatch({type:'new',mode,opponent,target:chosenTarget});else setNewMode(mode);};
  useEffect(()=>{
   if(rules||newMode||menu)return;
   let fn:(()=>void)|undefined;
@@ -37,7 +40,7 @@ export default function Home(){
   const context=(document as Document & {modelContext?:{registerTool:(tool:unknown,options:unknown)=>unknown}}).modelContext;
   if(!context?.registerTool)return;
   const lifecycle=new AbortController();
-  try{Promise.resolve(context.registerTool({name:'read_farkle_game',title:'Read the current Farkle game',description:'Read scores, active player, dice, held dice and the current turn phase.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,untrustedContentHint:false},execute:(input:unknown)=>{if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).length)throw new Error('Expected an empty object');const g=gameRef.current;return {mode:g.mode,phase:g.phase,player:playerName(g),scores:g.scores,turnPoints:g.pot,dice:g.dice,selected:g.selected,locked:g.locked,target:4000};}},{signal:lifecycle.signal})).catch(()=>{});}catch{}
+  try{Promise.resolve(context.registerTool({name:'read_farkle_game',title:'Read the current Farkle game',description:'Read scores, active player, dice, held dice and the current turn phase.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,untrustedContentHint:false},execute:(input:unknown)=>{if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).length)throw new Error('Expected an empty object');const g=gameRef.current;return {mode:g.mode,phase:g.phase,player:playerName(g),scores:g.scores,turnPoints:g.pot,dice:g.dice,selected:g.selected,locked:g.locked,target:g.target};}},{signal:lifecycle.signal})).catch(()=>{});}catch{}
   return ()=>lifecycle.abort();
  },[]);
  let instruction=game.message;
@@ -62,13 +65,24 @@ export default function Home(){
  <button className="utility" onClick={()=>setRules(true)}><BookOpen size={16}/> Правила</button>
  {game.phase==='ready'&&!isBot&&<button className="main-action" onClick={()=>dispatch({type:'roll'})}><Dices size={19}/> Кинути кубики</button>}
  {game.phase==='choose'&&!isBot&&<><button disabled={!selectedScore} onClick={()=>dispatch({type:'roll'})}><Dices size={18}/>{game.selected.length+game.locked.length===6?'Кинути всі 6':'Зарахувати й кинути'}</button><button className="main-action" disabled={!selectedScore} onClick={()=>dispatch({type:'bank'})}><Check size={18}/>Забрати {number(game.pot+selectedScore)}</button></>}
- <button className="utility" onClick={()=>setMenu(true)}><RotateCcw size={16}/> Меню</button>
+ <button className="utility" onClick={openMenu}><RotateCcw size={16}/> Меню</button>
  </nav>
  {game.result&&game.phase==='won'&&<TurnSummary key={`${game.rollId}-${game.phase}`} game={game} nextName={nextName} onNext={()=>dispatch({type:'next'})} onRestart={()=>dispatch({type:'new',mode:game.mode})}/>}
- <Dialog open={menu} onOpenChange={setMenu}><DialogContent className="game-dialog" showCloseButton={false}><DialogClose className="dialog-close" aria-label="Закрити меню"><X size={20}/></DialogClose><DialogTitle className="dialog-title">Корчма</DialogTitle><DialogDescription>Нова партія до 4 000 очок</DialogDescription><div className="menu-options"><p className="opponent-fairness">Однакові кубики та шанси для всіх. Відрізняються лише рішення й готовність ризикувати.</p><div className="opponent-list">{opponents.map(o=><button key={o.id} className={`opponent-choice ${game.mode==='bot'&&game.opponent===o.id?'current-opponent':''}`} onClick={()=>{setMenu(false);requestNew('bot',o.id);}}><span className="opponent-title"><b>{o.name}</b><span>{o.level}</span></span><em>{o.character}</em><span className="opponent-description">{o.description}</span></button>)}</div><button className="primary" onClick={()=>{setMenu(false);requestNew('hotseat');}}><Shield size={20}/> Удвох на одному пристрої</button><DialogClose className="secondary">Повернутися до гри</DialogClose></div></DialogContent></Dialog>
+ <Dialog open={menu} onOpenChange={setMenu}><DialogContent className="game-dialog opponent-menu" showCloseButton={false}>
+ <DialogClose className="dialog-close" aria-label="Закрити меню"><X size={20}/></DialogClose>
+ <header className="opponent-menu-heading"><span className="menu-kicker">Вечір у корчмі</span><DialogTitle className="dialog-title">Хто сяде навпроти?</DialogTitle><DialogDescription>Обери компанію та ціль нової партії.</DialogDescription></header>
+ <div className="match-settings"><fieldset className="match-setting"><legend>Режим гри</legend><div className="setting-options"><button aria-pressed={chosenMode==='bot'} onClick={()=>setChosenMode('bot')}><Crown size={17}/> Суперник</button><button aria-pressed={chosenMode==='hotseat'} onClick={()=>setChosenMode('hotseat')}><Shield size={17}/> Удвох</button></div></fieldset>
+ <fieldset className="match-setting"><legend>До скількох очок?</legend><div className="setting-options">{scoreTargets.map(target=><button key={target} aria-pressed={chosenTarget===target} onClick={()=>setChosenTarget(target)}>{number(target)}</button>)}</div></fieldset></div>
+ {chosenMode==='bot'?<div className="portrait-roster">{opponents.map(o=><button key={o.id} aria-pressed={chosenOpponent===o.id} className={`portrait-choice ${chosenOpponent===o.id?'portrait-chosen':''}`} onClick={()=>setChosenOpponent(o.id)}>
+ <div className="portrait-frame"><img src={o.portrait} alt="" className="opponent-portrait"/>{chosenOpponent===o.id&&<span className="portrait-check"><Check size={17}/></span>}<span className="portrait-character">{o.character}</span></div>
+ <div className="portrait-copy"><h3>{o.name}</h3><div className="portrait-level"><span className="level-marks" aria-hidden="true">{[0,1,2,3].map(n=><i key={n} className={n<({apprentice:1,innkeeper:2,mercenary:3,merchant:4}[o.id])?'filled':''}/>)}</span>{o.level}</div><p>{o.description}</p></div>
+ </button>)}</div>:<div className="hotseat-intro"><Shield size={38}/><h3>Один стіл. Двоє гравців.</h3><p>Кидайте по черзі на одному пристрої. Підсвічена картка показує, чий зараз хід.</p></div>}
+ <footer className="opponent-menu-footer"><p>Однакові кубики й шанси для всіх.<br/><span>Характер змінює рішення, а не удачу.</span></p><button className="primary start-match" onClick={()=>{setMenu(false);requestNew(chosenMode,chosenOpponent);}}>Грати до {number(chosenTarget)} <ArrowRight size={18}/></button></footer>
+ <DialogClose className="menu-resume">Повернутися до поточної гри</DialogClose>
+ </DialogContent></Dialog>
  <Dialog open={rules} onOpenChange={setRules}><DialogContent className="game-dialog tavern-rules" showCloseButton={false}>
  <DialogClose className="dialog-close" aria-label="Закрити правила"><X size={20}/></DialogClose>
- <div className="rules-heading"><div className="rules-seal" aria-hidden="true"><Dices size={28}/></div><div><DialogTitle className="dialog-title">Правила корчми</DialogTitle><DialogDescription>Наберіть 4 000 очок, щоб перемогти.</DialogDescription></div></div>
+ <div className="rules-heading"><div className="rules-seal" aria-hidden="true"><Dices size={28}/></div><div><DialogTitle className="dialog-title">Правила корчми</DialogTitle><DialogDescription>Наберіть {number(game.target)} очок, щоб перемогти.</DialogDescription></div></div>
  <div className="rules-body"><p className="rules-intro">Киньте кубики, виберіть залікові комбінації. Заберіть очки або ризикніть і киньте решту ще раз.</p>
  <h3 className="rules-section-title">Окремі кубики</h3>
  <div className="rules-combos"><RuleCombo dice={[1]} label="Одиниця" points="100"/><RuleCombo dice={[5]} label="П’ятірка" points="50"/></div>
@@ -81,10 +95,10 @@ export default function Home(){
  <div className="rules-tip"><b>Усі шість кубиків залікові?</b><p>Кидайте всі шість знову й продовжуйте накопичувати очки.</p></div>
  <p className="rules-footnote">Комбінації складаються лише з одного кидка. Відкладені кубики не додаються до нової комбінації.</p>
  <DialogClose className="primary rules-return">До столу <ArrowRight size={17}/></DialogClose></div></DialogContent></Dialog>
- <Dialog open={newMode!==null} onOpenChange={open=>{if(!open)setNewMode(null);}}><DialogContent className="game-dialog" showCloseButton={false}><DialogTitle className="dialog-title">Почати нову партію?</DialogTitle><DialogDescription>Поточний рахунок буде скинуто. Режим: {newMode==='bot'?`суперник — ${opponentInfo(chosenOpponent).name}`:'удвох на одному пристрої'}.</DialogDescription><div className="dialog-actions"><button className="secondary" onClick={()=>setNewMode(null)}>Продовжити гру</button><button className="primary" onClick={()=>{dispatch({type:'new',mode:newMode!,opponent:chosenOpponent});setNewMode(null);}}>Нова партія</button></div></DialogContent></Dialog>
+ <Dialog open={newMode!==null} onOpenChange={open=>{if(!open)setNewMode(null);}}><DialogContent className="game-dialog" showCloseButton={false}><DialogTitle className="dialog-title">Почати нову партію?</DialogTitle><DialogDescription>Поточний рахунок буде скинуто. Режим: {newMode==='bot'?`суперник — ${opponentInfo(chosenOpponent).name}`:'удвох на одному пристрої'}. Ціль — {number(chosenTarget)} очок.</DialogDescription><div className="dialog-actions"><button className="secondary" onClick={()=>setNewMode(null)}>Продовжити гру</button><button className="primary" onClick={()=>{dispatch({type:'new',mode:newMode!,opponent:chosenOpponent,target:chosenTarget});setNewMode(null);}}>Нова партія</button></div></DialogContent></Dialog>
  </main>
 }
-function PlayerScore({game,p}:{game:Game;p:number}){const active=game.player===p;return <section className={`score-note ${p===0?'near':'far'} ${active?'active':''} ${game.result?.player===p&&game.result.earned?'score-earned':''}`} aria-label={`Рахунок: ${playerName(game,p)}`}><h2>{playerName(game,p)}{active&&<span className="turn-mark" aria-hidden="true">◆</span>}</h2>{active&&<div className="active-turn-label">{p===0&&game.mode==='bot'?'Ваш хід':'Зараз грає'}</div>}<div className="total-line"><span>Рахунок / 4000</span><strong>{game.result?.player===p?<CountUp key={`${game.rollId}-${game.phase}`} from={game.result.before} to={game.result.after}/>:number(game.scores[p])}</strong></div><dl><div><dt>За хід</dt><dd>{active?number(game.pot):0}</dd></div><div><dt>Вибрано</dt><dd>{active?number(scoreDice(game.selected.map(i=>game.dice[i]))):0}</dd></div></dl></section>}
+function PlayerScore({game,p}:{game:Game;p:number}){const active=game.player===p;return <section className={`score-note ${p===0?'near':'far'} ${active?'active':''} ${game.result?.player===p&&game.result.earned?'score-earned':''}`} aria-label={`Рахунок: ${playerName(game,p)}`}><div className="score-identity">{p===1&&game.mode==='bot'?<img className="score-avatar" src={opponentInfo(game.opponent).portrait} alt=""/>:<span className="score-avatar player-emblem" aria-hidden="true"><Shield size={24}/></span>}<div className="score-identity-text"><h2>{playerName(game,p)}{active&&<span className="turn-mark" aria-hidden="true">◆</span>}</h2></div></div>{active&&<div className="active-turn-label">{p===0&&game.mode==='bot'?'Ваш хід':'Зараз грає'}</div>}<div className="total-line"><span>Рахунок / {number(game.target)}</span><strong>{game.result?.player===p?<CountUp key={`${game.rollId}-${game.phase}`} from={game.result.before} to={game.result.after}/>:number(game.scores[p])}</strong></div><dl><div><dt>За хід</dt><dd>{active?number(game.pot):0}</dd></div><div><dt>Вибрано</dt><dd>{active?number(scoreDice(game.selected.map(i=>game.dice[i]))):0}</dd></div></dl></section>}
 
 function CountUp({from,to}:{from:number;to:number}){
  const [value,setValue]=useState(from);
