@@ -1,8 +1,12 @@
 import {gameReducer,initialGame,scoreTargets,type Game,type Action} from './game.ts';
 import {uniformInt} from './random.ts';
 export type Room={game:Game;names:string[];tokens:string[];readyAt:number;nextAt:number;rematch:number[]};
-export function roomAction(room:Room,seat:number,input:{type:string;ids?:number[]},now=Date.now()):Room{
+export function roomAction(room:Room,seat:number,input:{type:string;ids?:number[];target?:number},now=Date.now()):Room{
  const r=structuredClone(room),g=r.game;
+ if(input.type==='target'){
+  if(seat!==0||r.names.length!==1||g.phase!=='ready')throw new Error('Ціль можна змінити лише до приєднання друга.');
+  r.game.target=validTarget(input.target);return r;
+ }
  if(r.names.length<2)throw new Error('Чекаємо другого гравця.');
  if(input.type==='rematch'){
   if(g.phase!=='won')throw new Error('Партія ще триває.');
