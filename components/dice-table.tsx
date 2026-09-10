@@ -40,7 +40,7 @@ outgoingLight = mix(vec3(tableLightness), outgoingLight, 0.45) * 0.22;
   let transfers:Transfer[]=[],pendingLaunch:{ids:number[];id:number;at:number}|null=null,visualSelected:number[]=[];
   const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let clearAt:number|null=null;let parkedIndices:number[]=[];
-  function parkedPosition(slot:number,count:number){const portrait=host.clientWidth/Math.max(host.clientHeight,1)<.85;return phone.matches&&portrait?new THREE.Vector3(4.15,.51*dieScale,(slot-(count-1)/2)*1.18):new THREE.Vector3((slot-(count-1)/2)*(phone.matches?.98:1.35),.51*dieScale,phone.matches?-3.6:-5);}
+  function parkedPosition(slot:number,count:number){const portrait=host.clientWidth/Math.max(host.clientHeight,1)<=1;return phone.matches&&portrait?new THREE.Vector3(4.15,.51*dieScale,(slot-(count-1)/2)*1.18):new THREE.Vector3((slot-(count-1)/2)*(phone.matches?.98:1.35),.51*dieScale,phone.matches?-3.6:-5);}
   let rolling=false,active:number[]=[],rollId=0,start=0,lastNudge=0;
   function reset(){parkedIndices=[];clearAt=null;meshes.forEach(restoreDie);transfers=[];pendingLaunch=null;visualSelected=[];rolling=false;bodies.forEach((b,i)=>{clearShellRotation(b);b.type=CANNON.Body.STATIC;b.collisionResponse=true;b.position.set((i%3-1)*1.8,.51*dieScale,(Math.floor(i/3)-.5)*1.8);b.quaternion.setFromEuler(0,0,0);const target=normals[faceValues.indexOf(i+1)];b.quaternion.setFromVectors(target,new CANNON.Vec3(0,1,0));b.velocity.setZero();b.angularVelocity.setZero();b.updateMassProperties();b.previousPosition.copy(b.position);b.interpolatedPosition.copy(b.position);b.previousQuaternion.copy(b.quaternion);b.interpolatedQuaternion.copy(b.quaternion);b.aabbNeedsUpdate=true;});}
   for(let i=0;i<6;i++){const material=textures.map(map=>new THREE.MeshStandardMaterial({map,roughness:.34,metalness:0,emissive:0x000000}));const mesh=new THREE.Mesh(geometry,material);mesh.castShadow=mesh.receiveShadow=true;mesh.userData.index=i;scene.add(mesh);meshes.push(mesh);const ring=new THREE.Group();
@@ -76,7 +76,7 @@ outgoingLight = mix(vec3(tableLightness), outgoingLight, 0.45) * 0.22;
   controller.current={roll,highlight,reset,clear};
   const resize=()=>{
    setWorldCompact(world,phone.matches);
-   const w=host.clientWidth,h=host.clientHeight;renderer.setSize(w,h);const aspect=w/Math.max(h,1),portrait=aspect<.85;
+   const w=host.clientWidth,h=host.clientHeight;renderer.setSize(w,h);const aspect=w/Math.max(h,1),portrait=phone.matches?aspect<=1:aspect<.85;
    camera.up.set(portrait?1:0,0,portrait?0:-1);
    let vertical:number;
    if(phone.matches&&!portrait){
