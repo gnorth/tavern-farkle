@@ -114,8 +114,8 @@
 
 /* Fine grain and shallow scuffs, with no input-intercepting texture layer. */
 .game-actions button,.primary,.secondary,.portrait-choice,.setting-options button{position:relative}
-.score-note::after,.selection-hint::after{content:"";position:absolute;inset:0;border-radius:inherit;background:url('/textures/worn-surface.svg') repeat;opacity:.28;pointer-events:none}
-.game-dialog{background-image:url('/textures/worn-surface.svg')!important;background-blend-mode:soft-light}
+.score-note::after,.selection-hint::after{content:"";position:absolute;inset:0;border-radius:inherit;background:url('/textures/worn-surface.png') repeat;opacity:.28;pointer-events:none}
+.game-dialog{background-image:url('/textures/worn-surface.png')!important;background-blend-mode:soft-light}
 
 @media (hover:none) and (pointer:coarse), (max-width:600px) and (orientation:portrait), (max-height:520px) and (orientation:landscape){.turn-controls .selection-hint{position:relative}}
 
