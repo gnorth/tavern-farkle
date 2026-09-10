@@ -19,7 +19,7 @@ export default function DiceTable(props:Props){
   renderer.setPixelRatio(Math.min(window.devicePixelRatio,1.7));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.35;host.appendChild(renderer.domElement);renderer.domElement.setAttribute('aria-hidden','true');
   const scene=new THREE.Scene();const camera=new THREE.OrthographicCamera(-7,7,5,-5,.1,100);camera.up.set(0,0,-1);camera.position.set(0,20,0);camera.lookAt(0,0,0);
   scene.add(new THREE.HemisphereLight(0xffe6c7,0x302031,2.5));const light=new THREE.DirectionalLight(0xffcd86,3.2);light.position.set(-3,16,3);light.castShadow=true;light.shadow.mapSize.set(1024,1024);Object.assign(light.shadow.camera,{left:-9,right:9,top:9,bottom:-9,near:.5,far:25});light.shadow.bias=-.001;scene.add(light);const fill=new THREE.PointLight(0xff8e36,12,20);fill.position.set(7,3,-4);scene.add(fill);
-  const world=createWorld();
+  const world=createWorld(phone.matches);
   const textures=faceValues.map(pipTexture),wood=woodTexture();const geometry=new RoundedBoxGeometry(.95,.95,.95,10,DICE_RADIUS);
   const rings:THREE.Group[]=[];const meshes:THREE.Mesh<THREE.BufferGeometry,THREE.MeshStandardMaterial[]>[]=[];const bodies:CANNON.Body[]=[];
   const boardMat=new THREE.MeshStandardMaterial({map:wood,roughness:.92,color:0xffffff});boardMat.onBeforeCompile=(shader)=>{shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',`#include <map_fragment>
@@ -49,14 +49,14 @@ outgoingLight = mix(vec3(tableLightness), outgoingLight, 0.45) * 0.22;
    rings.forEach(r=>r.visible=false);
    bodies.forEach((b,i)=>{const mesh=meshes[i];clearShellRotation(b);b.type=CANNON.Body.STATIC;b.collisionResponse=false;b.velocity.setZero();b.angularVelocity.setZero();b.position.set(mesh.position.x,mesh.position.y,mesh.position.z);b.quaternion.set(mesh.quaternion.x,mesh.quaternion.y,mesh.quaternion.z,mesh.quaternion.w);b.updateMassProperties();syncBody(b);mesh.material.forEach(m=>{m.transparent=true;m.needsUpdate=true;});});
   }
-  function beginThrow(ids:number[],id:number){clearAt=null;ids.forEach(i=>restoreDie(meshes[i]));active=ids;rollId=id;start=performance.now();lastNudge=start;rolling=true;ids.forEach((i,j)=>{bodies[i].collisionResponse=true;launchDie(bodies[i],j);});}
+  function beginThrow(ids:number[],id:number){clearAt=null;ids.forEach(i=>restoreDie(meshes[i]));active=ids;rollId=id;start=performance.now();lastNudge=start;rolling=true;ids.forEach((i,j)=>{bodies[i].collisionResponse=true;launchDie(bodies[i],j,undefined,phone.matches);});}
   function roll(ids:number[],id:number){
    rolling=false;transfers=[];pendingLaunch=null;
    const held=bodies.map((_,i)=>i).filter(i=>!ids.includes(i));
    // The previous visual selection includes all six on a hot-dice reroll.
    const toPark=[...new Set([...held,...visualSelected])];
    const now=performance.now();
-   toPark.forEach((i,slot)=>{const b=bodies[i],mesh=meshes[i];const to=new THREE.Vector3((slot-(toPark.length-1)/2)*1.35,.51,phone.matches?-3.25:-5.0);const q=new CANNON.Quaternion();q.setFromVectors(normals[faceValues.indexOf(latest.current.game.dice[i])],new CANNON.Vec3(0,1,0));
+   toPark.forEach((i,slot)=>{const b=bodies[i],mesh=meshes[i];const to=new THREE.Vector3((slot-(toPark.length-1)/2)*1.35,.51,phone.matches?-3.5:-5.0);const q=new CANNON.Quaternion();q.setFromVectors(normals[faceValues.indexOf(latest.current.game.dice[i])],new CANNON.Vec3(0,1,0));
     const targetQ=new THREE.Quaternion(q.x,q.y,q.z,q.w);const distance=mesh.position.distanceTo(to);
     if(distance>.04)transfers.push({index:i,from:mesh.position.clone(),to,fromQ:mesh.quaternion.clone(),toQ:targetQ,start:now+(reducedMotion?0:slot*35),duration:reducedMotion?0:560});
     clearShellRotation(b);b.type=CANNON.Body.STATIC;b.collisionResponse=false;b.velocity.setZero();b.angularVelocity.setZero();b.position.set(to.x,to.y,to.z);b.quaternion.copy(q);b.updateMassProperties();syncBody(b);

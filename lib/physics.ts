@@ -53,10 +53,11 @@ export function diceShape(){
  });
  return new CANNON.ConvexPolyhedron({vertices,faces});
 }
-export function createWorld(){const world=new CANNON.World({gravity:new CANNON.Vec3(0,-60,0),allowSleep:true});(world.solver as CANNON.GSSolver).iterations=20;
+export function createWorld(compact=false){const world=new CANNON.World({gravity:new CANNON.Vec3(0,-60,0),allowSleep:true});(world.solver as CANNON.GSSolver).iterations=20;
  world.addContactMaterial(new CANNON.ContactMaterial(woodMaterial,boneMaterial,{friction:.50,restitution:.035,contactEquationStiffness:1e7,contactEquationRelaxation:4}));
  world.addContactMaterial(new CANNON.ContactMaterial(boneMaterial,boneMaterial,{friction:0,restitution:.12,contactEquationStiffness:1e7,contactEquationRelaxation:4}));
- for(const [w,h,d,x,y,z] of [[13,.45,9,0,-.225,0],[.35,10,9,-6.3,5,0],[.35,10,9,6.3,5,0],[13,10,.35,0,5,4.35],[13,10,.35,0,5,-4.35]]){const b=new CANNON.Body({mass:0,material:woodMaterial,shape:new CANNON.Box(new CANNON.Vec3(w/2,h/2,d/2))});b.position.set(x,y,z);world.addBody(b);}
+ const halfX=compact?3:6.3,halfZ=compact?2.5:4.35;
+ for(const [w,h,d,x,y,z] of [[13,.45,9,0,-.225,0],[.35,10,9,-halfX,5,0],[.35,10,9,halfX,5,0],[13,10,.35,0,5,halfZ],[13,10,.35,0,5,-halfZ]]){const b=new CANNON.Body({mass:0,material:woodMaterial,shape:new CANNON.Box(new CANNON.Vec3(w/2,h/2,d/2))});b.position.set(x,y,z);world.addBody(b);}
  // A heavy first impact dissipates the throw's forward energy on the wood.
  world.addEventListener('postStep',()=>{for(const contact of world.contacts){
   const die=awaitingLanding.has(contact.bi)?contact.bi:awaitingLanding.has(contact.bj)?contact.bj:null;
@@ -67,11 +68,11 @@ export function createWorld(){const world=new CANNON.World({gravity:new CANNON.V
  return world;
 }
 export function createDie(world:CANNON.World){const b=new CANNON.Body({mass:2.8,material:boneMaterial,shape:diceShape(),linearDamping:.18,angularDamping:.32,allowSleep:true,sleepSpeedLimit:.10,sleepTimeLimit:.5});world.addBody(b);return b;}
-export function launchDie(b:CANNON.Body,j:number,random:()=>number=secureRandom){
+export function launchDie(b:CANNON.Body,j:number,random:()=>number=secureRandom,compact=false){
  setShellRotation(b,uniformInt(24));
  recoveryAttempts.delete(b);b.type=CANNON.Body.DYNAMIC;b.updateMassProperties();b.wakeUp();
  const row=Math.floor(j/3),lane=j%3-1;
- b.position.set(lane*1.65,1.2+row*1.6,3.5);
+ b.position.set(lane*1.65,1.2+row*1.6,compact?1.75:3.5);
  awaitingLanding.add(b);
  // Physical tumbling is independent of the numbered shell orientation.
  const u=random(),v=random()*2*Math.PI,w=random()*2*Math.PI;b.quaternion.set(Math.sqrt(1-u)*Math.sin(v),Math.sqrt(1-u)*Math.cos(v),Math.sqrt(u)*Math.sin(w),Math.sqrt(u)*Math.cos(w));
