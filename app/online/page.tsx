@@ -2,6 +2,7 @@
 import {useEffect,useRef,useState} from 'react';
 import {Dices,Users,Link,Copy,Check,ArrowLeft,ArrowRight,Shield,Clock,LoaderCircle} from 'lucide-react';
 import DiceTable from '@/components/dice-table';
+import RulesDialog from '@/components/rules-dialog';
 import {scoreDice,selectionBreakdown,type Game} from '@/lib/game';
 type Reply=Snapshot & {error?:string;id?:string;token?:string;host:string;target:number;joinable:boolean};
 type Snapshot={game:Game;names:string[];revision:number;seat:number;online:boolean[];rematch:number[]};
@@ -42,7 +43,7 @@ export default function OnlinePage(){
  </form>}
  {error&&<p className="lobby-error" role="alert">{error}</p>}</section></main>;
  return <main className="game-screen online-table">
- <DiceTable game={g!} authoritative interactive={canChoose} onResult={()=>{}} onSelect={id=>send('select',g!.selected.includes(id)?g!.selected.filter(i=>i!==id):[...g!.selected,id])}/>
+ <DiceTable game={g!} authoritative interactive={canChoose&&!rules} onResult={()=>{}} onSelect={id=>send('select',g!.selected.includes(id)?g!.selected.filter(i=>i!==id):[...g!.selected,id])}/>
  {[0,1].map(p=><section key={p} className={`score-note ${p===snap.seat?'near':'far'} ${g!.player===p?'active':''}`}><div className="score-identity"><span className="score-avatar player-emblem">{snap.names[p].slice(0,1).toUpperCase()}</span><div className="score-identity-text"><h2>{snap.names[p]}{p===snap.seat?' (ви)':''}</h2></div></div><div className="total-line"><span>Рахунок / <span className="score-target">{g!.target.toLocaleString('uk-UA')}</span></span><strong>{g!.scores[p].toLocaleString('uk-UA')}</strong></div><dl><div><dt>За хід</dt><dd>{g!.player===p?g!.pot:0}</dd></div><div><dt>{snap.online[p]?'У грі':'Поза мережею'}</dt></div></dl></section>)}
  <div className="game-status" role="status">{!connected?'Відновлюємо зв’язок…':g!.phase==='rolling'?'Кубики котяться…':g!.phase==='won'?`${snap.names[g!.winner!]} перемагає!`:mine?'Ваш хід':`Хід: ${snap.names[g!.player]}`}</div>
  {(g!.phase==='bust'||g!.phase==='handoff')&&<div className="bust-explanation" role="status"><h2>{g!.phase==='bust'?'Невдалий кидок':`+${g!.result?.earned} очок`}</h2><p>{g!.phase==='bust'?`Немає залікової комбінації. За хід втрачено ${g!.result?.lost||0} очок.`:`${snap.names[g!.player]} передає хід.`}</p></div>}
@@ -52,6 +53,6 @@ export default function OnlinePage(){
  {g!.phase==='choose'&&mine&&<><button disabled={!canChoose||!selected} onClick={()=>send('roll')}>Зарахувати й кинути</button><button className="main-action" disabled={!canChoose||!selected} onClick={()=>send('bank')}>Забрати {g!.pot+selected}</button></>}
  {g!.phase==='won'&&<button className="main-action" disabled={busy||snap.rematch.includes(snap.seat)} onClick={()=>send('rematch')}>{snap.rematch.includes(snap.seat)?'Чекаємо згоди друга':'Зіграти ще раз'}</button>}
  <button className="utility restart-action" onClick={()=>{setCopied(false);navigator.clipboard.writeText(location.href).then(()=>setCopied(true)).catch(()=>setError('Посилання можна скопіювати з адресного рядка.'));}}>{copied?'Скопійовано':'Запрошення'}</button><button className="utility" onClick={()=>location.assign('/')}>Вийти</button></nav></div>
- {rules&&<div className="table-overlay"><section className="table-notice"><h2>Правила корчми</h2><p>Одиниця — 100. П’ятірка — 50.<br/>Три однакових — значення × 100, три одиниці — 1 000.<br/>Кожен наступний однаковий кубик подвоює комбінацію.<br/>1–5: 500; 2–6: 750; 1–6: 1 500.</p><p>Зарахуйте вибір і ризикніть знову або заберіть очки.<br/>Невдалий кидок обнуляє очки цього ходу.</p><button className="primary" onClick={()=>setRules(false)}>Зрозуміло</button></section></div>}
+ <RulesDialog open={rules} onOpenChange={setRules} target={g!.target}/>
  </main>;
 }
