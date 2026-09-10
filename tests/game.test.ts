@@ -34,3 +34,29 @@ test('new match can select target without changing an ongoing match',()=>{
  const next=gameReducer(g,{type:'new',mode:'hotseat',target:8000,opponent:'apprentice'});
  assert.equal(g.target,4000);assert.equal(next.target,8000);assert.deepEqual(next.scores,[0,0]);
 });
+
+// Ordinary-dice table: https://kingdom-come-deliverance.fandom.com/wiki/Dice
+// Special dice and Devil's Head are deliberately outside this game mode.
+test('complete KCD ordinary dice table and hint totals',()=>{
+ const triples=[1000,200,300,400,500,600];
+ for(let face=1;face<=6;face++)for(let count=1;count<=6;count++){
+  const dice=Array(count).fill(face);
+  const expected=count>=3?triples[face-1]*2**(count-3):face===1?count*100:face===5?count*50:0;
+  assert.equal(scoreDice(dice),expected,`${count} dice showing ${face}`);
+  assert.equal(selectionBreakdown(dice).reduce((sum,part)=>sum+part.points,0),expected);
+ }
+ for(const [dice,expected] of [[[1,2,3,4,5],500],[[2,3,4,5,6],750],[[1,2,3,4,5,6],1500],[[2,2,3,3,6,6],0],[[2,2,2,3,3,3],500]] as [number[],number][]){
+  assert.equal(scoreDice(dice),expected);
+  assert.equal(selectionBreakdown(dice).reduce((sum,part)=>sum+part.points,0),expected);
+ }
+});
+test('KCD allows banking one of two scoring dice and forbids combining separate throws',()=>{
+ let g=roll(initialGame(),[5,5,2,3,4,6]);
+ g=gameReducer(g,{type:'select',ids:[0]});
+ g=roll(g,[1,2,2,3,3,4]);
+ assert.deepEqual(g.locked,[0]);assert.equal(g.pot,50);assert.equal(g.phase,'bust');
+ g=roll(initialGame(),[2,2,2,1,3,4]);
+ g=gameReducer(g,{type:'select',ids:[0,1,2]});
+ g=roll(g,[1,1,1,2,3,4]);
+ assert.equal(g.pot,200);assert.equal(g.phase,'bust');
+});
