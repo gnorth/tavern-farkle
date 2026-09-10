@@ -63,11 +63,11 @@ export default function Home(){
  <div className="selection-hint-parts">{selectedParts.map(part=><div key={part.label}><span>{part.label}</span>{selectedParts.length>1&&<b>+{number(part.points)}</b>}</div>)}</div></div>
  </aside>}
  <nav className={`game-actions ${game.phase==='choose'&&!isBot?'has-choice':''}`} aria-label="Дії гри">
- <button className="utility" onClick={()=>setRules(true)}><BookOpen size={16}/> Правила</button>
- {game.phase==='ready'&&!isBot&&<button className="main-action" onClick={()=>dispatch({type:'roll'})}><Dices size={19}/> Кинути кубики</button>}
- {game.phase==='choose'&&!isBot&&<><button disabled={!selectedScore} onClick={()=>dispatch({type:'roll'})}><Dices size={18}/>{game.selected.length+game.locked.length===6?'Кинути всі 6':'Зарахувати й кинути'}</button><button className="main-action" disabled={!selectedScore} onClick={()=>dispatch({type:'bank'})}><Check size={18}/>Забрати {number(game.pot+selectedScore)}</button></>}
- <button className="utility restart-action" onClick={()=>{setChosenOpponent(game.opponent);setChosenTarget(game.target);setChosenMode(game.mode);setNewMode(game.mode);}}><RotateCcw size={16}/> Почати заново</button>
- <button className="utility" onClick={openMenu}><RotateCcw size={16}/> Меню</button>
+ <button className="utility" onClick={()=>setRules(true)}><span className="action-content"><BookOpen size={16}/><span className="action-label"> Правила</span></span></button>
+ {game.phase==='ready'&&!isBot&&<button className="main-action" onClick={()=>dispatch({type:'roll'})}><span className="action-content"><Dices size={19}/><span className="action-label"> Кинути кубики</span></span></button>}
+ {game.phase==='choose'&&!isBot&&<><button disabled={!selectedScore} onClick={()=>dispatch({type:'roll'})}><span className="action-content"><Dices size={18}/><span className="action-label">{game.selected.length+game.locked.length===6?'Кинути всі 6':'Зарахувати й кинути'}</span></span></button><button className="main-action" disabled={!selectedScore} onClick={()=>dispatch({type:'bank'})}><span className="action-content"><Check size={18}/><span className="action-label">Забрати {number(game.pot+selectedScore)}</span></span></button></>}
+ <button className="utility restart-action" onClick={()=>{setChosenOpponent(game.opponent);setChosenTarget(game.target);setChosenMode(game.mode);setNewMode(game.mode);}}><span className="action-content"><RotateCcw size={16}/><span className="action-label"> Почати заново</span></span></button>
+ <button className="utility" onClick={openMenu}><span className="action-content"><RotateCcw size={16}/><span className="action-label"> Меню</span></span></button>
  </nav>
  </div>
  {game.result&&game.phase==='won'&&<TurnSummary key={`${game.rollId}-${game.phase}`} game={game} nextName={nextName} onNext={()=>dispatch({type:'next'})} onRestart={()=>dispatch({type:'new',mode:game.mode})}/>}
