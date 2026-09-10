@@ -24,7 +24,7 @@ export default function DiceTable(props:Props){
   const scene=new THREE.Scene();const camera=new THREE.OrthographicCamera(-7,7,5,-5,.1,100);camera.up.set(0,0,-1);camera.position.set(0,20,0);camera.lookAt(0,0,0);
   scene.add(new THREE.HemisphereLight(0xffe6c7,0x302031,2.5));const light=new THREE.DirectionalLight(0xffcd86,3.2);light.position.set(-3,16,3);light.castShadow=true;light.shadow.mapSize.set(1024,1024);Object.assign(light.shadow.camera,{left:-9,right:9,top:9,bottom:-9,near:.5,far:25});light.shadow.bias=-.001;scene.add(light);const fill=new THREE.PointLight(0xff8e36,12,20);fill.position.set(7,3,-4);scene.add(fill);
   const world=createWorld(phone.matches);
-  const textures=faceValues.map(pipTexture),wood=woodTexture();const dieScale=phone.matches?1.2:1;const geometry=new RoundedBoxGeometry(.95*dieScale,.95*dieScale,.95*dieScale,10,DICE_RADIUS*dieScale);
+  const textures=faceValues.map(pipTexture),wood=woodTexture();const dieScale=phone.matches?1.08:1;const geometry=new RoundedBoxGeometry(.95*dieScale,.95*dieScale,.95*dieScale,10,DICE_RADIUS*dieScale);
   const rings:THREE.Group[]=[];const meshes:THREE.Mesh<THREE.BufferGeometry,THREE.MeshStandardMaterial[]>[]=[];const bodies:CANNON.Body[]=[];
   const boardMat=new THREE.MeshStandardMaterial({map:wood,roughness:.92,color:0xffffff});boardMat.onBeforeCompile=(shader)=>{shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',`#include <map_fragment>
 float woodLuminance = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
