@@ -151,3 +151,10 @@
  .score-note{width:205px;height:104px;grid-template-rows:28px 27px 23px;padding:7px;gap:3px}.score-note .score-identity{height:28px}
  .game-status{top:var(--safe-top,8px);left:221px;right:221px}
 }
+
+/* Informational score annotation, visually distinct from action buttons. */
+.selection-hint,.turn-controls .selection-hint{background:none;border:0;border-radius:0;box-shadow:none;padding:4px 2px;text-shadow:0 2px 4px #120c08,0 0 9px #120c08;pointer-events:none}
+.selection-hint::after{content:none}
+.selection-hint-label{color:#d5c4a4;font-size:13px;letter-spacing:.025em}
+.selection-hint strong{color:#ffe2a0}
+.selection-hint-parts{color:#eadcc3}
