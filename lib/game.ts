@@ -4,7 +4,7 @@ export type ScoreTarget=typeof scoreTargets[number];
 export type Mode='bot'|'hotseat';
 export type Phase='ready'|'rolling'|'choose'|'bust'|'handoff'|'won';
 export type TurnResult={player:number;earned:number;lost:number;before:number;after:number};
-export type Game={target:ScoreTarget;opponent:OpponentId;result:TurnResult|null;mode:Mode;phase:Phase;player:number;scores:number[];pot:number;dice:number[];locked:number[];selected:number[];rollId:number;round:number;message:string;winner:number|null};
+export type Game={replaySeed?:number;target:ScoreTarget;opponent:OpponentId;result:TurnResult|null;mode:Mode;phase:Phase;player:number;scores:number[];pot:number;dice:number[];locked:number[];selected:number[];rollId:number;round:number;message:string;winner:number|null};
 export function scoreDice(dice:number[]):number{
  if(!dice.length || dice.some(v=>!Number.isInteger(v)||v<1||v>6))return 0;
  const counts=Array(7).fill(0);dice.forEach(v=>counts[v]++);

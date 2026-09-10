@@ -16,13 +16,19 @@ export function roomAction(room:Room,seat:number,input:{type:string;ids?:number[
  }
  if(now<r.readyAt||g.player!==seat)throw new Error('Зараз хід іншого гравця або ще триває кидок.');
  if(!['roll','bank','select'].includes(input.type))throw new Error('Невідома дія.');
+ if(input.ids&&input.type!=='select'){
+  if(!Array.isArray(input.ids)||input.ids.length>6||new Set(input.ids).size!==input.ids.length)throw new Error('Некоректний вибір.');
+  const selected=gameReducer(g,{type:'select',ids:input.ids});
+  if(g.phase==='choose'&&selected===g)throw new Error('Некоректний вибір.');
+  r.game=selected;
+ }
  const action=input as Action;
  if(input.type==='select'&&(!Array.isArray(input.ids)||input.ids.length>6||new Set(input.ids).size!==input.ids.length))throw new Error('Некоректний вибір.');
- const next=gameReducer(g,action);if(next===g)throw new Error('Ця дія зараз недоступна.');
+ const next=gameReducer(r.game,action);if(next===r.game)throw new Error('Ця дія зараз недоступна.');
  r.game=next;
  if(next.phase==='rolling'){
   const values:Record<number,number>={};next.dice.forEach((_,i)=>{if(!next.locked.includes(i))values[i]=uniformInt(6)+1;});
-  r.game=gameReducer(next,{type:'rolled',values,rollId:next.rollId});r.readyAt=now+4500;
+  r.game=gameReducer(next,{type:'rolled',values,rollId:next.rollId});r.game.replaySeed=uniformInt(1000000000);r.readyAt=now+2800;
  }
  if(r.game.phase==='bust'||r.game.phase==='handoff')r.nextAt=Math.max(now,r.readyAt)+4500;
  return r;
