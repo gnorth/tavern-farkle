@@ -74,7 +74,7 @@ test('mobile throws stay central and cannot overlap the held row',()=>{
 });
 
 
-test('rounded dice recover from edge and corner rests at both display sizes',()=>{
+test('dice recover from edge and corner rests at both display sizes',()=>{
  for(const scale of [.918,1])for(const [x,z] of [[Math.PI/4,0],[Math.PI/4,Math.PI/4],[0,Math.PI/4]]){
   const world=createWorld(true),die=createDie(world,scale);die.quaternion.setFromEuler(x,0,z);die.position.set(0,1.1,0);
   let settled=false;

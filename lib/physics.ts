@@ -1,7 +1,5 @@
 import * as CANNON from 'cannon-es';
 import {secureRandom,uniformInt} from './random.ts';
-import {Vector3} from 'three';
-import {ConvexHull} from 'three/addons/math/ConvexHull.js';
 export const DICE_RADIUS=.16;
 export const faceValues=[1,6,2,5,3,4];
 export const normals=[new CANNON.Vec3(1,0,0),new CANNON.Vec3(-1,0,0),new CANNON.Vec3(0,1,0),new CANNON.Vec3(0,-1,0),new CANNON.Vec3(0,0,1),new CANNON.Vec3(0,0,-1)];
@@ -28,31 +26,8 @@ export const PHYSICS_STEP=1/120;
 const woodMaterial=new CANNON.Material('wood');
 const boneMaterial=new CANNON.Material('bone');
 const awaitingLanding=new WeakSet<CANNON.Body>();
-// Sample spherical corners around a smaller cube, retaining six broad flat faces.
-// Merge coplanar hull triangles so contacts use continuous faces.
-export function diceShape(scale=1){
- const core=.475-DICE_RADIUS,points:Vector3[]=[];
- for(const sx of [-1,1])for(const sy of [-1,1])for(const sz of [-1,1]){
-  for(let x=0;x<=1;x++)for(let y=0;y<=1;y++)for(let z=0;z<=1;z++){
-   if(!x&&!y&&!z)continue;
-   const n=new Vector3(x*sx,y*sy,z*sz).normalize();
-   points.push(n.multiplyScalar(DICE_RADIUS).add(new Vector3(sx*core,sy*core,sz*core)));
-  }
- }
- const hull=new ConvexHull().setFromPoints(points),vertices:CANNON.Vec3[]=[],indices=new Map<string,number>();
- const planes=new Map<string,{normal:Vector3,ids:Set<number>}>();
- for(const face of hull.faces){
-  const key=[face.normal.x,face.normal.y,face.normal.z,face.constant].map(v=>v.toFixed(6)).join(',');
-  let plane=planes.get(key);if(!plane){plane={normal:face.normal.clone(),ids:new Set()};planes.set(key,plane);}
-  let edge=face.edge;do{const p=edge.head().point,k=p.toArray().map(v=>v.toFixed(6)).join(',');let id=indices.get(k);if(id===undefined){id=vertices.length;indices.set(k,id);vertices.push(new CANNON.Vec3(p.x,p.y,p.z));}plane.ids.add(id);edge=edge.next;}while(edge!==face.edge);
- }
- const faces=[...planes.values()].map(({normal,ids})=>{
-  const n=new CANNON.Vec3(normal.x,normal.y,normal.z),center=new CANNON.Vec3();ids.forEach(i=>center.vadd(vertices[i],center));center.scale(1/ids.size,center);
-  const u=n.cross(Math.abs(n.x)<.9?new CANNON.Vec3(1,0,0):new CANNON.Vec3(0,1,0)).unit(),v=n.cross(u);
-  return [...ids].sort((i,j)=>{const p=vertices[i].vsub(center),q=vertices[j].vsub(center);return Math.atan2(p.dot(v),p.dot(u))-Math.atan2(q.dot(v),q.dot(u));});
- });
- return new CANNON.ConvexPolyhedron({vertices:vertices.map(v=>v.scale(scale)),faces});
-}
+// Six flat faces and square edges: no bevels that can support a tilted die.
+export function diceShape(scale=1){return new CANNON.Box(new CANNON.Vec3(.475*scale,.475*scale,.475*scale));}
 const compactWorlds=new WeakSet<CANNON.World>();
 export function createWorld(compact=false){const world=new CANNON.World({gravity:new CANNON.Vec3(0,-60,0),allowSleep:true});(world.solver as CANNON.GSSolver).iterations=20;if(compact)compactWorlds.add(world);
  world.addContactMaterial(new CANNON.ContactMaterial(woodMaterial,boneMaterial,{friction:.50,restitution:.035,contactEquationStiffness:1e7,contactEquationRelaxation:4}));
@@ -92,7 +67,7 @@ export function nudgeTilted(b:CANNON.Body){
  const attempt=recoveryAttempts.get(b)??0;recoveryAttempts.set(b,attempt+1);
  let angle=attempt*2.399963+b.position.x;
  // Push away from the closest die supporting this one, instead of back into it.
- const neighbor=b.world?.bodies.filter(other=>other!==b&&other.shapes[0] instanceof CANNON.ConvexPolyhedron&&other.position.distanceTo(b.position)<1.65).sort((a,c)=>a.position.distanceTo(b.position)-c.position.distanceTo(b.position))[0];
+ const neighbor=b.world?.bodies.filter(other=>other!==b&&other.mass>0&&other.shapes[0] instanceof CANNON.Box&&other.position.distanceTo(b.position)<1.65).sort((a,c)=>a.position.distanceTo(b.position)-c.position.distanceTo(b.position))[0];
  if(neighbor){const dx=b.position.x-neighbor.position.x,dz=b.position.z-neighbor.position.z;if(Math.hypot(dx,dz)>.05)angle=Math.atan2(dz,dx)+Math.sin(attempt*2.399963)*.35;}
  if(Math.abs(b.position.x)>(b.world&&compactWorlds.has(b.world)?2:3)||Math.abs(b.position.z)>(b.world&&compactWorlds.has(b.world)?1.5:2.5))angle=Math.atan2(-b.position.z,-b.position.x)+(b.world&&compactWorlds.has(b.world)?Math.sin(attempt*2.399963)*1.1:0);
  const strength=1+Math.min(attempt,3)*.2;
