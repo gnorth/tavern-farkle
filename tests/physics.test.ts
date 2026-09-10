@@ -72,3 +72,13 @@ test('mobile throws stay central and cannot overlap the held row',()=>{
   for(const die of dice){assert.ok(Math.abs(die.position.x)<3&&Math.abs(die.position.z)<2.5);assert.ok(die.position.z-0.643>-3.6+0.437,'visible dice overlap held row');}
  }
 });
+
+
+test('rounded dice recover from edge and corner rests at both display sizes',()=>{
+ for(const scale of [.918,1])for(const [x,z] of [[Math.PI/4,0],[Math.PI/4,Math.PI/4],[0,Math.PI/4]]){
+  const world=createWorld(true),die=createDie(world,scale);die.quaternion.setFromEuler(x,0,z);die.position.set(0,1.1,0);
+  let settled=false;
+  for(let step=0;step<1800;step++){world.step(PHYSICS_STEP);if(step%90===0)nudgeTilted(die);if(step>80&&die.sleepState===CANNON.Body.SLEEPING&&upperFace(die.quaternion).alignment>.985&&die.position.y<.65){settled=true;break;}}
+  assert.ok(settled,`edge rest at scale ${scale}, tilt ${x}/${z}`);
+ }
+});

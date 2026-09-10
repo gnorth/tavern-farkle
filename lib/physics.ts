@@ -33,7 +33,7 @@ const awaitingLanding=new WeakSet<CANNON.Body>();
 export function diceShape(scale=1){
  const core=.475-DICE_RADIUS,points:Vector3[]=[];
  for(const sx of [-1,1])for(const sy of [-1,1])for(const sz of [-1,1]){
-  for(let x=0;x<=1;x++)for(let y=0;y<=1;y++)for(let z=0;z<=1;z++){
+  for(let x=0;x<=2;x++)for(let y=0;y<=2;y++)for(let z=0;z<=2;z++){
    if(!x&&!y&&!z)continue;
    const n=new Vector3(x*sx,y*sy,z*sz).normalize();
    points.push(n.multiplyScalar(DICE_RADIUS).add(new Vector3(sx*core,sy*core,sz*core)));
