@@ -30,7 +30,7 @@ const boneMaterial=new CANNON.Material('bone');
 const awaitingLanding=new WeakSet<CANNON.Body>();
 // Sample spherical corners around a smaller cube, retaining six broad flat faces.
 // Merge coplanar hull triangles so contacts use continuous faces.
-export function diceShape(){
+export function diceShape(scale=1){
  const core=.475-DICE_RADIUS,points:Vector3[]=[];
  for(const sx of [-1,1])for(const sy of [-1,1])for(const sz of [-1,1]){
   for(let x=0;x<=1;x++)for(let y=0;y<=1;y++)for(let z=0;z<=1;z++){
@@ -51,9 +51,10 @@ export function diceShape(){
   const u=n.cross(Math.abs(n.x)<.9?new CANNON.Vec3(1,0,0):new CANNON.Vec3(0,1,0)).unit(),v=n.cross(u);
   return [...ids].sort((i,j)=>{const p=vertices[i].vsub(center),q=vertices[j].vsub(center);return Math.atan2(p.dot(v),p.dot(u))-Math.atan2(q.dot(v),q.dot(u));});
  });
- return new CANNON.ConvexPolyhedron({vertices,faces});
+ return new CANNON.ConvexPolyhedron({vertices:vertices.map(v=>v.scale(scale)),faces});
 }
-export function createWorld(compact=false){const world=new CANNON.World({gravity:new CANNON.Vec3(0,-60,0),allowSleep:true});(world.solver as CANNON.GSSolver).iterations=20;
+const compactWorlds=new WeakSet<CANNON.World>();
+export function createWorld(compact=false){const world=new CANNON.World({gravity:new CANNON.Vec3(0,-60,0),allowSleep:true});(world.solver as CANNON.GSSolver).iterations=20;if(compact)compactWorlds.add(world);
  world.addContactMaterial(new CANNON.ContactMaterial(woodMaterial,boneMaterial,{friction:.50,restitution:.035,contactEquationStiffness:1e7,contactEquationRelaxation:4}));
  world.addContactMaterial(new CANNON.ContactMaterial(boneMaterial,boneMaterial,{friction:0,restitution:.12,contactEquationStiffness:1e7,contactEquationRelaxation:4}));
  const halfX=compact?3:6.3,halfZ=compact?2.5:4.35;
@@ -67,7 +68,7 @@ export function createWorld(compact=false){const world=new CANNON.World({gravity
  }});
  return world;
 }
-export function createDie(world:CANNON.World){const b=new CANNON.Body({mass:2.8,material:boneMaterial,shape:diceShape(),linearDamping:.18,angularDamping:.32,allowSleep:true,sleepSpeedLimit:.10,sleepTimeLimit:.5});world.addBody(b);return b;}
+export function createDie(world:CANNON.World,scale=1){const b=new CANNON.Body({mass:2.8,material:boneMaterial,shape:diceShape(scale),linearDamping:.18,angularDamping:.32,allowSleep:true,sleepSpeedLimit:.10,sleepTimeLimit:.5});world.addBody(b);return b;}
 export function launchDie(b:CANNON.Body,j:number,random:()=>number=secureRandom,compact=false){
  setShellRotation(b,uniformInt(24));
  recoveryAttempts.delete(b);b.type=CANNON.Body.DYNAMIC;b.updateMassProperties();b.wakeUp();
@@ -93,7 +94,7 @@ export function nudgeTilted(b:CANNON.Body){
  // Push away from the closest die supporting this one, instead of back into it.
  const neighbor=b.world?.bodies.filter(other=>other!==b&&other.shapes[0] instanceof CANNON.ConvexPolyhedron&&other.position.distanceTo(b.position)<1.65).sort((a,c)=>a.position.distanceTo(b.position)-c.position.distanceTo(b.position))[0];
  if(neighbor){const dx=b.position.x-neighbor.position.x,dz=b.position.z-neighbor.position.z;if(Math.hypot(dx,dz)>.05)angle=Math.atan2(dz,dx)+Math.sin(attempt*2.399963)*.35;}
- if(Math.abs(b.position.x)>3||Math.abs(b.position.z)>2.5)angle=Math.atan2(-b.position.z,-b.position.x);
+ if(Math.abs(b.position.x)>(b.world&&compactWorlds.has(b.world)?2:3)||Math.abs(b.position.z)>(b.world&&compactWorlds.has(b.world)?1.5:2.5))angle=Math.atan2(-b.position.z,-b.position.x)+(b.world&&compactWorlds.has(b.world)?Math.sin(attempt*2.399963)*1.1:0);
  const strength=1+Math.min(attempt,3)*.2;
  b.wakeUp();b.applyImpulse(new CANNON.Vec3(Math.cos(angle)*2.6*strength,4.4,Math.sin(angle)*2.6*strength).scale(b.mass),new CANNON.Vec3(Math.cos(angle+.8)*.24,0,Math.sin(angle+.8)*.24));
 }

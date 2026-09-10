@@ -60,7 +60,7 @@ test('tilted dice slide free of neighboring dice across contact directions',()=>
 test('mobile throws stay central and cannot overlap the held row',()=>{
  let seed=49031;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/2**32;};
  for(let count=1;count<=6;count++)for(let run=0;run<10;run++){
-  const world=createWorld(true),dice=Array.from({length:count},()=>createDie(world));
+  const world=createWorld(true),dice=Array.from({length:count},()=>createDie(world,1.2));
   dice.forEach((die,i)=>launchDie(die,i,random,true));let settled=false;
   for(let step=0;step<3600;step++){
    world.step(PHYSICS_STEP);
@@ -68,7 +68,7 @@ test('mobile throws stay central and cannot overlap the held row',()=>{
    if(step%90===0)dice.forEach(nudgeTilted);
    if(step>80&&dice.every(die=>die.sleepState===CANNON.Body.SLEEPING&&upperFace(die.quaternion).alignment>.985&&die.position.y<.65)){settled=true;break;}
   }
-  assert.ok(settled,`mobile ${count} dice, run ${run} did not settle`);
-  for(const die of dice){assert.ok(Math.abs(die.position.x)<3&&Math.abs(die.position.z)<2.5);assert.ok(die.position.z+.0-0.7>-3.5+0.475,'visible dice overlap held row');}
+  assert.ok(settled,`mobile ${count} dice, run ${run} did not settle: ${JSON.stringify(dice.map(b=>({p:b.position,a:upperFace(b.quaternion).alignment,s:b.sleepState})))}`);
+  for(const die of dice){assert.ok(Math.abs(die.position.x)<3&&Math.abs(die.position.z)<2.5);assert.ok(die.position.z-0.84>-3.5+0.57,'visible dice overlap held row');}
  }
 });

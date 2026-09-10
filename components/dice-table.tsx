@@ -5,7 +5,11 @@ import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js'
 import * as CANNON from 'cannon-es';
 import type {Game} from '@/lib/game';
 import {faceValues,normals,upperFace,visibleQuaternion,rolledFace,clearShellRotation,createWorld,createDie,launchDie,nudgeTilted,PHYSICS_STEP,DICE_RADIUS} from '@/lib/physics';
-function pipTexture(value:number){const canvas=document.createElement('canvas');canvas.width=canvas.height=256;const ctx=canvas.getContext('2d')!;ctx.fillStyle='#eadfbd';ctx.fillRect(0,0,256,256);const pips:Record<number,number[][]>={1:[[0,0]],2:[[-1,-1],[1,1]],3:[[-1,-1],[0,0],[1,1]],4:[[-1,-1],[-1,1],[1,-1],[1,1]],5:[[-1,-1],[-1,1],[0,0],[1,-1],[1,1]],6:[[-1,-1],[-1,0],[-1,1],[1,-1],[1,0],[1,1]]};pips[value].forEach(([x,y])=>{ctx.beginPath();ctx.arc(128+x*63,128+y*63,value===1?27:23,0,Math.PI*2);ctx.fillStyle=value===1?'#430d08':'#090705';ctx.fill();ctx.beginPath();ctx.arc(126+x*63,126+y*63,14,Math.PI,Math.PI*1.8);ctx.strokeStyle='#100b0766';ctx.lineWidth=3;ctx.stroke();});const t=new THREE.CanvasTexture(canvas);t.colorSpace=THREE.SRGBColorSpace;return t;}
+function pipTexture(value:number){const canvas=document.createElement('canvas');canvas.width=canvas.height=256;const ctx=canvas.getContext('2d')!;ctx.fillStyle='#eadfbd';ctx.fillRect(0,0,256,256);
+ // Deterministic bone grain is decorative and never consumes the game's RNG.
+ for(let y=0;y<256;y+=2)for(let x=0;x<256;x+=2){const n=(Math.sin(x*12.9898+y*78.233+value*7)*43758.5453)%1;ctx.fillStyle=n>0?'rgba(102,76,38,.09)':'rgba(255,250,226,.13)';ctx.fillRect(x,y,2,2);}
+ for(let i=0;i<26;i++){const x=(i*47+value*19)%256,y=(i*73)%256;ctx.beginPath();ctx.moveTo(x,y);ctx.bezierCurveTo(x+9,y+6,x-8,y+19,x+3,y+35);ctx.strokeStyle='rgba(111,82,41,.15)';ctx.lineWidth=1.4;ctx.stroke();}
+ const edge=ctx.createRadialGradient(128,128,65,128,128,175);edge.addColorStop(0,'rgba(92,62,24,0)');edge.addColorStop(1,'rgba(92,62,24,.2)');ctx.fillStyle=edge;ctx.fillRect(0,0,256,256);const pips:Record<number,number[][]>={1:[[0,0]],2:[[-1,-1],[1,1]],3:[[-1,-1],[0,0],[1,1]],4:[[-1,-1],[-1,1],[1,-1],[1,1]],5:[[-1,-1],[-1,1],[0,0],[1,-1],[1,1]],6:[[-1,-1],[-1,0],[-1,1],[1,-1],[1,0],[1,1]]};pips[value].forEach(([x,y])=>{ctx.beginPath();ctx.arc(128+x*63,128+y*63,value===1?27:23,0,Math.PI*2);ctx.fillStyle=value===1?'#430d08':'#090705';ctx.fill();ctx.beginPath();ctx.arc(126+x*63,126+y*63,14,Math.PI,Math.PI*1.8);ctx.strokeStyle='#100b0766';ctx.lineWidth=3;ctx.stroke();});const t=new THREE.CanvasTexture(canvas);t.colorSpace=THREE.SRGBColorSpace;return t;}
 function woodTexture(){const texture=new THREE.TextureLoader().load('/textures/tavern-oak.jpg');texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=4;return texture;}
 type Props={game:Game;onResult:(v:Record<number,number>,rollId:number)=>void;onSelect:(id:number)=>void;interactive:boolean};
 export default function DiceTable(props:Props){
@@ -14,13 +18,13 @@ export default function DiceTable(props:Props){
  const controller=useRef<{roll:(ids:number[],id:number)=>void;highlight:()=>void;reset:()=>void;clear:()=>void}|null>(null);
  const [error,setError]=useState(false);
  useEffect(()=>{
-  const host=mount.current!;const phone=window.matchMedia('(hover: none) and (pointer: coarse)');let renderer:THREE.WebGLRenderer;
+  const host=mount.current!;const phone=window.matchMedia('(hover: none) and (pointer: coarse), (max-width: 900px) and (orientation: portrait), (max-height: 520px) and (orientation: landscape)');let renderer:THREE.WebGLRenderer;
   try{renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});}catch{setError(true);return;}
   renderer.setPixelRatio(Math.min(window.devicePixelRatio,1.7));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.35;host.appendChild(renderer.domElement);renderer.domElement.setAttribute('aria-hidden','true');
   const scene=new THREE.Scene();const camera=new THREE.OrthographicCamera(-7,7,5,-5,.1,100);camera.up.set(0,0,-1);camera.position.set(0,20,0);camera.lookAt(0,0,0);
   scene.add(new THREE.HemisphereLight(0xffe6c7,0x302031,2.5));const light=new THREE.DirectionalLight(0xffcd86,3.2);light.position.set(-3,16,3);light.castShadow=true;light.shadow.mapSize.set(1024,1024);Object.assign(light.shadow.camera,{left:-9,right:9,top:9,bottom:-9,near:.5,far:25});light.shadow.bias=-.001;scene.add(light);const fill=new THREE.PointLight(0xff8e36,12,20);fill.position.set(7,3,-4);scene.add(fill);
   const world=createWorld(phone.matches);
-  const textures=faceValues.map(pipTexture),wood=woodTexture();const geometry=new RoundedBoxGeometry(.95,.95,.95,10,DICE_RADIUS);
+  const textures=faceValues.map(pipTexture),wood=woodTexture();const dieScale=phone.matches?1.2:1;const geometry=new RoundedBoxGeometry(.95*dieScale,.95*dieScale,.95*dieScale,10,DICE_RADIUS*dieScale);
   const rings:THREE.Group[]=[];const meshes:THREE.Mesh<THREE.BufferGeometry,THREE.MeshStandardMaterial[]>[]=[];const bodies:CANNON.Body[]=[];
   const boardMat=new THREE.MeshStandardMaterial({map:wood,roughness:.92,color:0xffffff});boardMat.onBeforeCompile=(shader)=>{shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',`#include <map_fragment>
 float woodLuminance = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
@@ -35,11 +39,11 @@ outgoingLight = mix(vec3(tableLightness), outgoingLight, 0.45) * 0.22;
   const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let clearAt:number|null=null;
   let rolling=false,active:number[]=[],rollId=0,start=0,lastNudge=0;
-  function reset(){clearAt=null;meshes.forEach(restoreDie);transfers=[];pendingLaunch=null;visualSelected=[];rolling=false;bodies.forEach((b,i)=>{clearShellRotation(b);b.type=CANNON.Body.STATIC;b.collisionResponse=true;b.position.set((i%3-1)*1.8,.51,(Math.floor(i/3)-.5)*1.8);b.quaternion.setFromEuler(0,0,0);const target=normals[faceValues.indexOf(i+1)];b.quaternion.setFromVectors(target,new CANNON.Vec3(0,1,0));b.velocity.setZero();b.angularVelocity.setZero();b.updateMassProperties();b.previousPosition.copy(b.position);b.interpolatedPosition.copy(b.position);b.previousQuaternion.copy(b.quaternion);b.interpolatedQuaternion.copy(b.quaternion);b.aabbNeedsUpdate=true;});}
+  function reset(){clearAt=null;meshes.forEach(restoreDie);transfers=[];pendingLaunch=null;visualSelected=[];rolling=false;bodies.forEach((b,i)=>{clearShellRotation(b);b.type=CANNON.Body.STATIC;b.collisionResponse=true;b.position.set((i%3-1)*1.8,.51*dieScale,(Math.floor(i/3)-.5)*1.8);b.quaternion.setFromEuler(0,0,0);const target=normals[faceValues.indexOf(i+1)];b.quaternion.setFromVectors(target,new CANNON.Vec3(0,1,0));b.velocity.setZero();b.angularVelocity.setZero();b.updateMassProperties();b.previousPosition.copy(b.position);b.interpolatedPosition.copy(b.position);b.previousQuaternion.copy(b.quaternion);b.interpolatedQuaternion.copy(b.quaternion);b.aabbNeedsUpdate=true;});}
   for(let i=0;i<6;i++){const material=textures.map(map=>new THREE.MeshStandardMaterial({map,roughness:.34,metalness:0,emissive:0x000000}));const mesh=new THREE.Mesh(geometry,material);mesh.castShadow=mesh.receiveShadow=true;mesh.userData.index=i;scene.add(mesh);meshes.push(mesh);const ring=new THREE.Group();
    const ringBand=(radius:number,thickness:number,color:number,order:number)=>{const band=new THREE.Mesh(new THREE.TorusGeometry(radius,thickness,10,72),new THREE.MeshBasicMaterial({color,depthTest:false,depthWrite:false,toneMapped:false}));band.rotation.x=-Math.PI/2;band.renderOrder=order;ring.add(band);};
-   ringBand(.72,.025,0x3b2915,2);ringBand(.72,.012,0xcda663,3);
-   ring.visible=false;scene.add(ring);rings.push(ring);const b=createDie(world);bodies.push(b);}
+   ringBand(.72*dieScale,.025,0x3b2915,2);ringBand(.72*dieScale,.012,0xcda663,3);
+   ring.visible=false;scene.add(ring);rings.push(ring);const b=createDie(world,dieScale);bodies.push(b);}
   reset();
   function syncBody(b:CANNON.Body){b.previousPosition.copy(b.position);b.interpolatedPosition.copy(b.position);b.previousQuaternion.copy(b.quaternion);b.interpolatedQuaternion.copy(b.quaternion);b.aabbNeedsUpdate=true;}
   function restoreDie(mesh:THREE.Mesh<THREE.BufferGeometry,THREE.MeshStandardMaterial[]>){mesh.visible=true;mesh.scale.setScalar(1);mesh.castShadow=true;mesh.material.forEach(m=>{m.opacity=1;if(m.transparent){m.transparent=false;m.needsUpdate=true;}});}
@@ -56,7 +60,7 @@ outgoingLight = mix(vec3(tableLightness), outgoingLight, 0.45) * 0.22;
    // The previous visual selection includes all six on a hot-dice reroll.
    const toPark=[...new Set([...held,...visualSelected])];
    const now=performance.now();
-   toPark.forEach((i,slot)=>{const b=bodies[i],mesh=meshes[i];const to=new THREE.Vector3((slot-(toPark.length-1)/2)*1.35,.51,phone.matches?-3.5:-5.0);const q=new CANNON.Quaternion();q.setFromVectors(normals[faceValues.indexOf(latest.current.game.dice[i])],new CANNON.Vec3(0,1,0));
+   toPark.forEach((i,slot)=>{const b=bodies[i],mesh=meshes[i];const to=new THREE.Vector3((slot-(toPark.length-1)/2)*1.35,.51*dieScale,phone.matches?-3.5:-5.0);const q=new CANNON.Quaternion();q.setFromVectors(normals[faceValues.indexOf(latest.current.game.dice[i])],new CANNON.Vec3(0,1,0));
     const targetQ=new THREE.Quaternion(q.x,q.y,q.z,q.w);const distance=mesh.position.distanceTo(to);
     if(distance>.04)transfers.push({index:i,from:mesh.position.clone(),to,fromQ:mesh.quaternion.clone(),toQ:targetQ,start:now+(reducedMotion?0:slot*35),duration:reducedMotion?0:560});
     clearShellRotation(b);b.type=CANNON.Body.STATIC;b.collisionResponse=false;b.velocity.setZero();b.angularVelocity.setZero();b.position.set(to.x,to.y,to.z);b.quaternion.copy(q);b.updateMassProperties();syncBody(b);

@@ -139,3 +139,15 @@
  .score-note .score-identity{height:24px}.score-note .score-avatar{width:24px;height:24px;flex-basis:24px}
  .game-status{top:var(--safe-top,8px);left:206px;right:206px;transform:none;width:auto}
 }
+
+@media (hover:none) and (pointer:coarse), (max-width:900px) and (orientation:portrait), (max-height:520px) and (orientation:landscape){
+ .score-note{height:110px;grid-template-rows:30px 29px 23px;padding:8px;gap:4px}
+ .score-note .score-identity{height:30px}.score-note .score-avatar{width:30px;height:30px;flex-basis:30px}
+ .score-note .score-identity h2{font-size:16px!important}.score-note .total-line>span{font-size:13px}.score-note .total-line strong{font-size:28px}
+ .score-note dt{font-size:13px}.score-note dd{font-size:17px}.score-note dl>div{gap:3px}
+ .game-status{top:calc(var(--safe-top,8px) + 118px)}
+}
+@media (max-height:520px) and (orientation:landscape), (hover:none) and (pointer:coarse) and (orientation:landscape){
+ .score-note{width:205px;height:104px;grid-template-rows:28px 27px 23px;padding:7px;gap:3px}.score-note .score-identity{height:28px}
+ .game-status{top:var(--safe-top,8px);left:221px;right:221px}
+}
