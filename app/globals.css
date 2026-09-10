@@ -196,3 +196,11 @@
  .opponent-menu .setting-options button{flex:1 1 0;min-width:0;min-height:44px;padding:8px;font-size:16px;white-space:nowrap}
  .opponent-menu .setting-options svg{flex-shrink:0}
 }
+
+/* Score explanations are readable annotations, never nested scroll areas. */
+.selection-hint,.turn-controls .selection-hint{max-height:none;overflow:visible}
+@media (hover:none) and (pointer:coarse), (max-width:900px) and (orientation:portrait), (max-height:520px) and (orientation:landscape){
+ .turn-controls .selection-hint-parts{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:3px 10px}
+ .turn-controls .selection-hint-parts>div{margin:0;white-space:nowrap}
+ .turn-controls .selection-hint-parts>div+div::before{content:'·';color:#b5a081;margin-right:8px}
+}
