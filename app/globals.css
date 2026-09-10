@@ -206,3 +206,30 @@
  .turn-controls .selection-hint-parts>div{margin:0;white-space:nowrap}
  .turn-controls .selection-hint-parts>div+div::before{content:'·';color:#b5a081;margin-right:8px}
 }
+
+/* Landscape phones use side rails, leaving the full height for the dice. */
+@media (max-height:520px) and (orientation:landscape), (hover:none) and (pointer:coarse) and (orientation:landscape){
+ .game-screen{--safe-top:max(8px,env(safe-area-inset-top));--safe-bottom:max(8px,env(safe-area-inset-bottom));--safe-left:max(8px,env(safe-area-inset-left));--safe-right:max(8px,env(safe-area-inset-right))}
+ .score-note{width:144px;height:109px;left:var(--safe-left)!important;right:auto!important;padding:7px;grid-template-rows:28px 32px 23px}
+ .score-note.far{top:var(--safe-top)!important;bottom:auto!important}
+ .score-note.near{top:auto!important;bottom:var(--safe-bottom)!important}
+ .score-note .score-identity h2{font-size:14px!important}
+ .score-note .total-line>span{font-size:11px}.score-note .total-line strong{font-size:24px}
+ .score-note dt{font-size:10px}.score-note dd{font-size:14px}
+ .game-status{top:var(--safe-top);left:160px;right:196px;width:auto;transform:none;font-size:13px}
+ .turn-controls{left:auto;right:var(--safe-right);bottom:var(--safe-bottom);width:180px;gap:6px}
+ .turn-controls .game-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;align-items:stretch}
+ .game-actions button{min-width:0;min-height:44px;padding:5px;font-size:14px;line-height:1.15}
+ .game-actions .utility{font-size:12px}
+ .game-actions .utility:first-child{grid-column:1!important;grid-row:3!important}
+ .game-actions .utility:last-child{grid-column:2!important;grid-row:3!important}
+ .game-actions .restart-action{grid-column:1/-1!important;grid-row:4!important}
+ .game-actions button:not(.utility),.game-actions.has-choice button:not(.utility){grid-column:1/-1!important;grid-row:1!important}
+ .game-actions.has-choice button.main-action{grid-row:2!important}
+ .turn-controls .selection-hint{width:100%;padding:7px 9px}
+ .turn-controls .selection-hint-content{display:block}
+ .turn-controls .selection-hint strong{font-size:23px}
+ .turn-controls .selection-hint-parts{font-size:12px;justify-content:flex-start;gap:2px 6px;text-align:left}
+ .bust-explanation{left:160px;right:196px;top:50%;width:auto;max-width:none;transform:translateY(-50%);padding:6px}
+ .bust-explanation h2{font-size:20px}.bust-explanation p{font-size:13px}.bust-explanation strong{font-size:17px}
+}
