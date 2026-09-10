@@ -97,3 +97,20 @@ test('viewport changes and missed contacts never lose a die below or outside the
  launchDie(die,0,()=>.5,false);assert.equal(die.position.z,1.75);
  setWorldCompact(world,false);launchDie(die,0,()=>.5,true);assert.equal(die.position.z,3.5);
 });
+
+
+test('reused dice finish repeated throws after parking and clearing between turns',()=>{
+ const world=createWorld(),dice=Array.from({length:6},()=>createDie(world));
+ for(let turn=0;turn<30;turn++){
+  dice.forEach((b,i)=>{b.type=CANNON.Body.STATIC;b.collisionResponse=false;b.position.set((i-2.5)*1.35,.51,-5);b.velocity.setZero();b.angularVelocity.setZero();b.updateMassProperties();});
+  for(let step=0;step<100;step++)world.step(PHYSICS_STEP,1/60,8);
+  dice.forEach((b,i)=>{b.collisionResponse=true;launchDie(b,i);});
+  let settled=false;
+  for(let step=0;step<1800;step++){
+   world.step(PHYSICS_STEP,1/60,8);
+   if(step%45===0)dice.forEach(nudgeTilted);
+   if(step>40&&dice.every(b=>b.sleepState===CANNON.Body.SLEEPING&&upperFace(b.quaternion).alignment>.985&&b.position.y<.65)){settled=true;break;}
+  }
+  assert.ok(settled,`turn ${turn}: ${JSON.stringify(dice.map(b=>({p:b.position,s:b.sleepState})))}`);
+ }
+});
