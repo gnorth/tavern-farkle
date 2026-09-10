@@ -257,3 +257,11 @@
  .score-note dl>div{flex:1;flex-wrap:wrap;column-gap:3px;row-gap:0}
  .score-note dl>div:last-child{justify-content:flex-end}
 }
+
+/* Stack desktop player names below the portrait instead of splitting names. */
+@media (hover:hover) and (pointer:fine) and (min-height:521px) and (min-width:901px), (hover:hover) and (pointer:fine) and (min-height:521px) and (min-width:601px) and (orientation:landscape){
+ .score-note .score-identity{flex-direction:column;align-items:flex-start;gap:8px}
+ .score-note .score-avatar{flex-shrink:0}
+ .score-note .score-identity-text{width:100%;min-width:0}
+ .score-note .score-identity h2{margin:0!important;overflow-wrap:normal;word-break:normal}
+}
