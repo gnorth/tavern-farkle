@@ -50,17 +50,18 @@ export default function Home(){
  <DiceTable game={game} interactive={canChoose&&!rules&&!menu&&!newMode} onSelect={id=>dispatch({type:'toggle',id})} onResult={(values,rollId)=>dispatch({type:'rolled',values,rollId})}/>
  <PlayerScore game={game} p={1}/><PlayerScore game={game} p={0}/>
  <div className="game-status" role="status">{game.phase==='rolling'?'Кубики котяться…':isBot&&!game.result?`Хід: ${playerName(game)}`:game.phase==='choose'?(selectedInvalid?'Ця комбінація не дає очок':game.selected.length?'':'Виберіть кубики'):game.phase==='ready'?`Хід: ${playerName(game)}`:''}</div>
- {canChoose&&selectedScore>0&&!rules&&!menu&&!newMode&&<aside className="selection-hint" role="status" aria-live="polite" aria-atomic="true">
- <span className="selection-hint-label">Залікова комбінація</span>
- <div key={game.selected.join(',')} className="selection-hint-content"><strong>+{number(selectedScore)} <small>очок</small></strong>
- <div className="selection-hint-parts">{selectedParts.map(part=><div key={part.label}><span>{part.label}</span>{selectedParts.length>1&&<b>+{number(part.points)}</b>}</div>)}</div></div>
- </aside>}
  {game.phase==='bust'&&game.result&&<div className="bust-explanation" role="status" aria-live="polite" aria-atomic="true">
  <span className="bust-player">{playerName(game,game.result.player)}</span><h2>Невдалий кидок</h2>
  <p>Не випало жодної залікової комбінації.</p>
  {game.result.lost>0?<strong>Згоріло {number(game.result.lost)} очок за хід</strong>:<strong>За цей хід — 0 очок</strong>}
  <p className="bust-safe">Загальний рахунок збережено.</p>
  </div>}
+ <div className="turn-controls">
+ {canChoose&&selectedScore>0&&!rules&&!menu&&!newMode&&<aside className="selection-hint" role="status" aria-live="polite" aria-atomic="true">
+ <span className="selection-hint-label">Залікова комбінація</span>
+ <div key={game.selected.join(',')} className="selection-hint-content"><strong>+{number(selectedScore)} <small>очок</small></strong>
+ <div className="selection-hint-parts">{selectedParts.map(part=><div key={part.label}><span>{part.label}</span>{selectedParts.length>1&&<b>+{number(part.points)}</b>}</div>)}</div></div>
+ </aside>}
  <nav className={`game-actions ${game.phase==='choose'&&!isBot?'has-choice':''}`} aria-label="Дії гри">
  <button className="utility" onClick={()=>setRules(true)}><BookOpen size={16}/> Правила</button>
  {game.phase==='ready'&&!isBot&&<button className="main-action" onClick={()=>dispatch({type:'roll'})}><Dices size={19}/> Кинути кубики</button>}
@@ -68,6 +69,7 @@ export default function Home(){
  <button className="utility restart-action" onClick={()=>{setChosenOpponent(game.opponent);setChosenTarget(game.target);setChosenMode(game.mode);setNewMode(game.mode);}}><RotateCcw size={16}/> Почати заново</button>
  <button className="utility" onClick={openMenu}><RotateCcw size={16}/> Меню</button>
  </nav>
+ </div>
  {game.result&&game.phase==='won'&&<TurnSummary key={`${game.rollId}-${game.phase}`} game={game} nextName={nextName} onNext={()=>dispatch({type:'next'})} onRestart={()=>dispatch({type:'new',mode:game.mode})}/>}
  <Dialog open={menu} onOpenChange={setMenu}><DialogContent className="game-dialog opponent-menu" showCloseButton={false}>
  <DialogClose className="dialog-close" aria-label="Закрити меню"><X size={20}/></DialogClose>

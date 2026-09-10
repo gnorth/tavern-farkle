@@ -97,3 +97,17 @@
  .game-actions{grid-template-columns:72px 1fr 1fr 115px 70px}
  .game-actions .restart-action{grid-row:1;grid-column:4;font-size:13px}.game-actions .utility:last-child{grid-column:5!important}
 }
+
+/* Keep the hint in normal flow above actions, including when button text wraps. */
+.turn-controls{display:contents}
+@media (hover:none) and (pointer:coarse), (max-width:600px) and (orientation:portrait), (max-height:520px) and (orientation:landscape){
+ .turn-controls{position:absolute;z-index:5;left:var(--safe-left,14px);right:var(--safe-right,14px);bottom:var(--safe-bottom,max(14px,env(safe-area-inset-bottom)));display:flex;flex-direction:column;gap:8px;pointer-events:none}
+ .turn-controls .game-actions{position:static;width:100%;margin:0;pointer-events:auto}
+ .turn-controls .selection-hint{position:static;inset:auto;width:100%;margin:0;padding:7px 10px;max-height:76px;overflow:auto;pointer-events:auto}
+ .turn-controls .selection-hint-label{display:none}
+ .turn-controls .selection-hint-content{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0}
+ .turn-controls .selection-hint strong{font-size:25px;line-height:1.25;white-space:nowrap;flex-shrink:0}
+ .turn-controls .selection-hint small{font-size:14px}
+ .turn-controls .selection-hint-parts{font-size:14px;line-height:1.3;margin:0;min-width:0;text-align:right;overflow-wrap:anywhere}
+ .turn-controls .selection-hint-parts b{display:none}
+}
