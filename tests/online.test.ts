@@ -1,0 +1,10 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {roomAction,advanceRoom,type Room} from '../lib/online.ts';
+import {initialGame} from '../lib/game.ts';
+const room=():Room=>({game:initialGame('hotseat'),names:['A','B'],tokens:['a','b'],readyAt:0,nextAt:0,rematch:[]});
+test('only active participant rolls and server creates all dice',()=>{const r=room();assert.throws(()=>roomAction(r,1,{type:'roll'}));const next=roomAction(r,0,{type:'roll'},100);assert.equal(next.game.rollId,1);assert.ok(next.game.dice.every(n=>n>=1&&n<=6));assert.throws(()=>roomAction(next,0,{type:'roll'},101));assert.equal(r.game.rollId,0);});
+test('cannot play while alone or inject a result',()=>{const r=room();assert.throws(()=>roomAction(r,0,{type:'rolled'}));r.names.pop();assert.throws(()=>roomAction(r,0,{type:'roll'}));});
+test('banked scores advance exactly once after the display interval',()=>{const r=room();r.game.phase='choose';r.game.dice=[1,2,3,4,5,6];r.game.selected=[0];const next=roomAction(r,0,{type:'bank'},100);assert.equal(next.game.scores[0],100);assert.equal(advanceRoom(next,200).game.player,0);assert.equal(advanceRoom(next,5000).game.player,1);assert.equal(advanceRoom(next,6000).game.player,1);});
+test('rematch requires both players and keeps the chosen target',()=>{const r=room();r.game.phase='won';r.game.target=8000;const a=roomAction(r,0,{type:'rematch'});assert.equal(a.game.phase,'won');const b=roomAction(a,1,{type:'rematch'});assert.equal(b.game.phase,'ready');assert.equal(b.game.target,8000);});
+test('duplicate and out-of-range dice are rejected',()=>{const r=room();r.game.phase='choose';assert.throws(()=>roomAction(r,0,{type:'select',ids:[0,0]}));assert.throws(()=>roomAction(r,0,{type:'select',ids:[9]}));});

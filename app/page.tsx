@@ -72,7 +72,7 @@ export default function Home(){
  </div>
  {game.result&&game.phase==='won'&&<TurnSummary key={`${game.rollId}-${game.phase}`} game={game} nextName={nextName} onNext={()=>dispatch({type:'next'})} onRestart={()=>dispatch({type:'new',mode:game.mode})}/>}
  <Dialog open={menu} onOpenChange={setMenu}><DialogContent className="game-dialog opponent-menu" showCloseButton={false}>
- <DialogClose className="dialog-close" aria-label="Закрити меню"><X size={20}/></DialogClose>
+ <DialogClose className="dialog-close" aria-label="Закрити меню"><X size={20}/></DialogClose><a className="primary online-entry" href="/online">Грати з другом онлайн</a>
  <header className="opponent-menu-heading"><span className="menu-kicker">Вечір у корчмі</span><DialogTitle className="dialog-title">Хто сяде навпроти?</DialogTitle><DialogDescription>Обери компанію та ціль нової партії.</DialogDescription></header>
  <div className="match-settings"><fieldset className="match-setting"><legend>Режим гри</legend><div className="setting-options"><button aria-pressed={chosenMode==='bot'} onClick={()=>setChosenMode('bot')}><Crown size={17}/> Суперник</button><button aria-pressed={chosenMode==='hotseat'} onClick={()=>setChosenMode('hotseat')}><Shield size={17}/> Удвох</button></div></fieldset>
  <fieldset className="match-setting"><legend>До скількох очок?</legend><div className="setting-options">{scoreTargets.map(target=><button key={target} aria-pressed={chosenTarget===target} onClick={()=>setChosenTarget(target)}>{number(target)}</button>)}</div></fieldset></div>

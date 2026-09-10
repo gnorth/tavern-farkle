@@ -265,3 +265,7 @@
  .score-note .score-identity-text{width:100%;min-width:0}
  .score-note .score-identity h2{margin:0!important;overflow-wrap:normal;word-break:normal}
 }
+.online-lobby{min-height:100dvh;display:grid;place-items:center;background:linear-gradient(#120d09aa,#120d09dd),url('/textures/tavern-oak.jpg') center/cover;padding:20px;overflow:auto;height:100dvh}
+.online-panel{width:min(480px,100%);padding:26px;background:#281e15f2;border:1px solid #977642;border-radius:10px;display:grid;gap:16px;color:#f3dfb9}
+.online-panel h1,.online-panel p{margin:0}.online-panel h1{font-size:30px}.online-panel label{display:grid;gap:6px}.online-panel input,.online-panel select{width:100%;min-width:0;font:16px Georgia;padding:12px;border:1px solid #967549;border-radius:4px;background:#140f0a;color:#ffe8bb}.online-back{color:#d1b485}.online-panel [role=alert]{color:#ffb5a0}.online-entry{align-self:center;text-decoration:none}
+.online-table .player-emblem{display:grid;place-items:center;font-weight:bold;font-size:22px}
