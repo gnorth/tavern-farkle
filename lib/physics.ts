@@ -29,21 +29,22 @@ const awaitingLanding=new WeakSet<CANNON.Body>();
 // Six flat faces and square edges: no bevels that can support a tilted die.
 export function diceShape(scale=1){return new CANNON.Box(new CANNON.Vec3(.475*scale,.475*scale,.475*scale));}
 const compactWorlds=new WeakSet<CANNON.World>();
-export function createWorld(compact=false){const world=new CANNON.World({gravity:new CANNON.Vec3(0,-60,0),allowSleep:true});(world.solver as CANNON.GSSolver).iterations=20;if(compact)compactWorlds.add(world);
- world.addContactMaterial(new CANNON.ContactMaterial(woodMaterial,boneMaterial,{friction:.50,restitution:.035,contactEquationStiffness:1e7,contactEquationRelaxation:4}));
+const GRAVITY=38;
+export function createWorld(compact=false){const world=new CANNON.World({gravity:new CANNON.Vec3(0,-GRAVITY,0),allowSleep:true});(world.solver as CANNON.GSSolver).iterations=20;if(compact)compactWorlds.add(world);
+ world.addContactMaterial(new CANNON.ContactMaterial(woodMaterial,boneMaterial,{friction:.4,restitution:.16,contactEquationStiffness:1e7,contactEquationRelaxation:4}));
  world.addContactMaterial(new CANNON.ContactMaterial(boneMaterial,boneMaterial,{friction:0,restitution:.12,contactEquationStiffness:1e7,contactEquationRelaxation:4}));
  const halfX=compact?3:6.3,halfZ=compact?2.5:4.35;
  for(const [w,h,d,x,y,z] of [[13,.45,9,0,-.225,0],[.35,10,9,-halfX,5,0],[.35,10,9,halfX,5,0],[13,10,.35,0,5,halfZ],[13,10,.35,0,5,-halfZ]]){const b=new CANNON.Body({mass:0,material:woodMaterial,shape:new CANNON.Box(new CANNON.Vec3(w/2,h/2,d/2))});b.position.set(x,y,z);world.addBody(b);}
- // A heavy first impact dissipates the throw's forward energy on the wood.
+ // A modest first-impact loss retains a natural bounce and tumble on wood.
  world.addEventListener('postStep',()=>{for(const contact of world.contacts){
   const die=awaitingLanding.has(contact.bi)?contact.bi:awaitingLanding.has(contact.bj)?contact.bj:null;
   if(!die)continue;const other=contact.bi===die?contact.bj:contact.bi;
   if(other.mass!==0||other.position.y>=0)continue;
-  awaitingLanding.delete(die);die.velocity.x*=.42;die.velocity.z*=.42;die.angularVelocity.scale(.35,die.angularVelocity);
+  awaitingLanding.delete(die);die.velocity.x*=.65;die.velocity.z*=.65;die.angularVelocity.scale(.65,die.angularVelocity);
  }});
  return world;
 }
-export function createDie(world:CANNON.World,scale=1){const b=new CANNON.Body({mass:2.8,material:boneMaterial,shape:diceShape(scale),linearDamping:.18,angularDamping:.32,allowSleep:true,sleepSpeedLimit:.10,sleepTimeLimit:.5});world.addBody(b);return b;}
+export function createDie(world:CANNON.World,scale=1){const b=new CANNON.Body({mass:2.8,material:boneMaterial,shape:diceShape(scale),linearDamping:.16,angularDamping:.24,allowSleep:true,sleepSpeedLimit:.10,sleepTimeLimit:.5});world.addBody(b);return b;}
 export function launchDie(b:CANNON.Body,j:number,random:()=>number=secureRandom,compact=false){
  setShellRotation(b,uniformInt(24));
  recoveryAttempts.delete(b);b.type=CANNON.Body.DYNAMIC;b.updateMassProperties();b.wakeUp();
@@ -53,7 +54,7 @@ export function launchDie(b:CANNON.Body,j:number,random:()=>number=secureRandom,
  // Physical tumbling is independent of the numbered shell orientation.
  const u=random(),v=random()*2*Math.PI,w=random()*2*Math.PI;b.quaternion.set(Math.sqrt(1-u)*Math.sin(v),Math.sqrt(1-u)*Math.cos(v),Math.sqrt(u)*Math.sin(w),Math.sqrt(u)*Math.cos(w));
  // Solve the flight to a spread of landing points around the table center.
- const up=2+random()*.3,flight=(up+Math.sqrt(up*up+120*(b.position.y-.7)))/60;
+ const up=2+random()*.3,flight=(up+Math.sqrt(up*up+2*GRAVITY*(b.position.y-.7)))/GRAVITY;
  const targetX=lane*1.45+(random()-.5)*.24,targetZ=(row?.8:-.6)+(random()-.5)*.2;
  b.velocity.set((targetX-b.position.x)/flight,up,(targetZ-b.position.z)/flight);
  b.angularVelocity.set(-(9+random()*4),(random()-.5)*5,(random()-.5)*4);
