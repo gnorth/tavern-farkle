@@ -5,7 +5,7 @@ const db=()=> (env as unknown as {DB:D1Database}).DB;
 const reply=(v:unknown,status=200)=>Response.json(v,{status,headers:{'Cache-Control':'no-store'}});
 async function hash(t:string){return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t)))).map(v=>v.toString(16).padStart(2,'0')).join('');}
 async function row(id:string){if(!/^[a-f0-9-]{36}$/.test(id))throw new Error('Некоректне запрошення.');const v=await db().prepare('SELECT * FROM rooms WHERE id=? AND expires>?').bind(id,Date.now()).first<{id:string;state:string;revision:number;seen0:number;seen1:number}>();if(!v)throw new Error('Кімнату не знайдено або запрошення прострочене.');return v;}
-function view(r:Room,revision:number,seat:number,seen:number[]){const game=structuredClone(r.game);if(Date.now()<r.readyAt)game.phase='rolling';return {game,names:r.names,revision,seat,rematch:r.rematch,online:seen.map(t=>Date.now()-t<15000)};}
+function view(r:Room,revision:number,seat:number,seen:number[]){const game=structuredClone(r.game);if(Date.now()<r.readyAt)game.phase='rolling';return {game,names:r.names,revision,seat,rematch:r.rematch,rematchTarget:r.rematchTarget??r.game.target,online:seen.map(t=>Date.now()-t<15000)};}
 export async function GET(req:Request){try{
  const id=new URL(req.url).searchParams.get('id')||'',v=await row(id),r:Room=JSON.parse(v.state),token=req.headers.get('Authorization')?.replace(/^Bearer /,'')||'';
  const seat=token?r.tokens.indexOf(await hash(token)):-1;

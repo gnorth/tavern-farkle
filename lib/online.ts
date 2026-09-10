@@ -1,6 +1,6 @@
 import {gameReducer,initialGame,scoreTargets,type Game,type Action} from './game.ts';
 import {uniformInt} from './random.ts';
-export type Room={game:Game;names:string[];tokens:string[];readyAt:number;nextAt:number;rematch:number[]};
+export type Room={game:Game;names:string[];tokens:string[];readyAt:number;nextAt:number;rematch:number[];rematchTarget?:Game['target']};
 export function roomAction(room:Room,seat:number,input:{type:string;ids?:number[];target?:number},now=Date.now()):Room{
  const r=structuredClone(room),g=r.game;
  if(input.type==='target'){
@@ -8,10 +8,16 @@ export function roomAction(room:Room,seat:number,input:{type:string;ids?:number[
   r.game.target=validTarget(input.target);return r;
  }
  if(r.names.length<2)throw new Error('Чекаємо другого гравця.');
+ if(input.type==='rematch-target'){
+  if(g.phase!=='won')throw new Error('Ціль реваншу можна змінити після завершення партії.');
+  const target=validTarget(input.target);
+  if(target!==(r.rematchTarget??g.target)){r.rematchTarget=target;r.rematch=[];}
+  return r;
+ }
  if(input.type==='rematch'){
   if(g.phase!=='won')throw new Error('Партія ще триває.');
   r.rematch=[...new Set([...r.rematch,seat])];
-  if(r.rematch.length===2){r.game=initialGame('hotseat',g.rollId+1,'innkeeper',g.target);r.rematch=[];r.readyAt=0;r.nextAt=0;}
+  if(r.rematch.length===2){r.game=initialGame('hotseat',g.rollId+1,'innkeeper',r.rematchTarget??g.target);delete r.rematchTarget;r.rematch=[];r.readyAt=0;r.nextAt=0;}
   return r;
  }
  if(now<r.readyAt||g.player!==seat)throw new Error('Зараз хід іншого гравця або ще триває кидок.');
