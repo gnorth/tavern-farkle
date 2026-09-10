@@ -1,7 +1,6 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import {Dices,Users,Link,Copy,Check,ArrowLeft,ArrowRight,Shield,Clock,LoaderCircle} from 'lucide-react';
-import {Slider} from '@/components/ui/slider';
 import DiceTable from '@/components/dice-table';
 import RulesDialog from '@/components/rules-dialog';
 import {scoreDice,selectionBreakdown,type Game} from '@/lib/game';
@@ -9,7 +8,6 @@ type Reply=Snapshot & {error?:string;id?:string;token?:string;host:string;target
 type Snapshot={game:Game;names:string[];revision:number;seat:number;online:boolean[];rematch:number[]};
 export default function OnlinePage(){
  const [localSelected,setLocalSelected]=useState<number[]>([]);
- const [targetDraft,setTargetDraft]=useState<number|null>(null);
  const [initialized,setInitialized]=useState(false);
  const [room,setRoom]=useState(''),[token,setToken]=useState(''),[snap,setSnap]=useState<Snapshot|null>(null),[invite,setInvite]=useState<{host:string;target:number;joinable:boolean}|null>(null);
  const [name,setName]=useState(''),[target,setTarget]=useState(4000),[error,setError]=useState(''),[busy,setBusy]=useState(false),[connected,setConnected]=useState(false),[copied,setCopied]=useState(false),[rules,setRules]=useState(false);
@@ -22,7 +20,7 @@ export default function OnlinePage(){
  async function send(type:string,ids?:number[],newTarget?:number){if(busy)return;setBusy(true);setError('');try{
  const res=await fetch('/api/rooms',{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:`Bearer ${token}`}:{})},body:JSON.stringify({type,id:room,name,target:newTarget??target,revision:current.current?.revision,ids})});const v=await res.json() as Reply;if(!res.ok)throw new Error(v.error);
  if(v.token){const id=v.id||room;localStorage.setItem(`farkle-room-${id}`,v.token);localStorage.setItem('farkle-name',name.trim());setToken(v.token);setRoom(id);history.replaceState(null,'',`/online?room=${id}`);}accept(v);
- }catch(e){setError((e as Error).message);}finally{setBusy(false);setTargetDraft(null);}}
+ }catch(e){setError((e as Error).message);}finally{setBusy(false);}}
  useEffect(()=>setLocalSelected([]),[snap?.game.rollId,snap?.game.player,snap?.game.phase]);
  const g=snap?{...snap.game,selected:snap.game.player===snap.seat?localSelected:snap.game.selected}:undefined,joined=(snap?.names.length||0)===2;
  const mine=!!snap&&g?.player===snap.seat,canChoose=joined&&mine&&g?.phase==='choose'&&!busy&&connected;
@@ -34,7 +32,6 @@ export default function OnlinePage(){
  <header className="lobby-heading"><div className="lobby-seal" aria-hidden="true"><Dices size={38}/></div><span className="lobby-kicker">ПАРТІЯ НА ДВОХ</span><h1 id="lobby-title">{snap?'Ваш стіл готовий':room?'Вас запрошують до столу':'Вечір у добрій компанії'}</h1><p>{snap?'Залишилося покликати друга.':room?'Займіть вільне місце — і можна кидати кубики.':'Створіть запрошення та зіграйте з другом у корчмі.'}</p></header>
  {!initialized||room&&!snap&&!invite&&!error?<div className="lobby-wait" role="status"><LoaderCircle size={18} className="lobby-spinner"/> Шукаємо ваш стіл…</div>:snap?<>
  <div className="lobby-match"><span><Users size={16}/> 1 із 2 гравців</span><span>До <b>{snap.game.target.toLocaleString('uk-UA')}</b> очок</span></div>
- <div className="waiting-target"><div className="waiting-target-heading"><label id="waiting-target-label">До скількох очок граємо?</label><output>{(targetDraft??snap.game.target).toLocaleString('uk-UA')}</output></div><Slider aria-labelledby="waiting-target-label" min={4000} max={8000} step={2000} value={[targetDraft??snap.game.target]} disabled={busy||!connected} onValueChange={value=>setTargetDraft(Array.isArray(value)?value[0]:value)} onValueCommitted={value=>{const n=Array.isArray(value)?value[0]:value;if(n!==snap.game.target)send('target',undefined,n);else setTargetDraft(null);}}/><div className="waiting-target-marks" aria-hidden="true"><span>4 000</span><span>6 000</span><span>8 000</span></div><small role="status">{busy?'Зберігаємо ціль…':'Можна змінити, поки чекаєте друга'}</small></div>
  <div className="lobby-seats"><div className="lobby-seat"><span className="seat-avatar">{snap.names[0].slice(0,1).toUpperCase()}</span><strong>{snap.names[0]}</strong><small><Check size={13}/> Ви готові</small></div><div className="lobby-seat empty"><span className="seat-avatar"><Users size={27}/></span><strong>Місце для друга</strong><small>Чекає на запрошення</small></div></div>
  <div className="invite-box"><label htmlFor="invite-url"><Link size={16}/> Посилання для друга</label><div className="invite-field"><input id="invite-url" readOnly value={invitationUrl} onFocus={e=>e.currentTarget.select()}/></div><button className="primary lobby-primary" onClick={copyInvite}>{copied?<Check size={19}/>:<Copy size={19}/>} {copied?'Скопійовано — надішліть другу':'Скопіювати запрошення'}</button><p>Надішліть посилання в будь-якому месенджері.</p></div>
  <div className="lobby-wait" role="status"><span className={connected?'waiting-dot':'waiting-dot offline'}/>{connected?'Гра почнеться, коли друг приєднається':'Відновлюємо зв’язок…'}</div>
