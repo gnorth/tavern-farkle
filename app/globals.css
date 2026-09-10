@@ -181,3 +181,6 @@
  .game-actions button:not(.utility) .action-label{max-width:14ch}
  .game-actions .utility .action-content{gap:5px}
 }
+
+/* A soft ink wash reads as an annotation, without a button border. */
+.selection-hint,.turn-controls .selection-hint{background:linear-gradient(90deg,#170f09e8,#1d140cdb 82%,#1d140c99);padding:9px 12px;border:0;border-radius:2px;box-shadow:none}
