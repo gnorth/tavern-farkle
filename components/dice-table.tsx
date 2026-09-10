@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 import * as CANNON from 'cannon-es';
 import type {Game} from '@/lib/game';
-import {faceValues,normals,upperFace,visibleQuaternion,rolledFace,clearShellRotation,createWorld,createDie,launchDie,nudgeTilted,PHYSICS_STEP,DICE_RADIUS} from '@/lib/physics';
+import {faceValues,normals,upperFace,visibleQuaternion,rolledFace,clearShellRotation,createWorld,setWorldCompact,createDie,launchDie,nudgeTilted,PHYSICS_STEP,DICE_RADIUS} from '@/lib/physics';
 function pipTexture(value:number){const canvas=document.createElement('canvas');canvas.width=canvas.height=256;const ctx=canvas.getContext('2d')!;ctx.fillStyle='#d9c9a3';ctx.fillRect(0,0,256,256);
  // Broad mottling remains visible after the texture is reduced to phone size.
  for(let i=0;i<18;i++){const x=(i*83+value*29)%256,y=(i*59+value*43)%256,r=12+(i*7)%27;const stain=ctx.createRadialGradient(x,y,0,x,y,r);stain.addColorStop(0,'rgba(94,64,29,.24)');stain.addColorStop(1,'rgba(94,64,29,0)');ctx.fillStyle=stain;ctx.fillRect(x-r,y-r,r*2,r*2);}
@@ -75,6 +75,7 @@ outgoingLight = mix(vec3(tableLightness), outgoingLight, 0.45) * 0.22;
   function highlight(){visualSelected=[...latest.current.game.selected];rings.forEach((r,i)=>r.visible=latest.current.game.selected.includes(i));meshes.forEach((m,i)=>m.material.forEach(mat=>{mat.emissive.setHex(latest.current.game.selected.includes(i)?0x947025:0x000000);mat.emissiveIntensity=.12;mat.color.setHex(latest.current.game.locked.includes(i)?0xb4a78d:0xffffff);}));}
   controller.current={roll,highlight,reset,clear};
   const resize=()=>{
+   setWorldCompact(world,phone.matches);
    const w=host.clientWidth,h=host.clientHeight;renderer.setSize(w,h);const aspect=w/Math.max(h,1),portrait=aspect<.85;
    camera.up.set(portrait?1:0,0,portrait?0:-1);
    let vertical:number;

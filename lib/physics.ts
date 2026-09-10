@@ -30,11 +30,41 @@ const awaitingLanding=new WeakSet<CANNON.Body>();
 export function diceShape(scale=1){return new CANNON.Box(new CANNON.Vec3(.475*scale,.475*scale,.475*scale));}
 const compactWorlds=new WeakSet<CANNON.World>();
 const GRAVITY=38;
+const trayWalls=new WeakMap<CANNON.World,CANNON.Body[]>();
+export function setWorldCompact(world:CANNON.World,compact:boolean){
+ if(compact)compactWorlds.add(world);else compactWorlds.delete(world);
+ const walls=trayWalls.get(world);if(!walls)return;
+ const halfX=compact?3:6.3,halfZ=compact?2.5:4.35;
+ walls[0].position.x=-halfX;walls[1].position.x=halfX;
+ walls[2].position.z=halfZ;walls[3].position.z=-halfZ;
+ walls.forEach(w=>{w.aabbNeedsUpdate=true;});
+}
+// Numerical safety net for a missed collision or a viewport change mid-throw.
+// Preserve orientation and numbering; only return escaped bodies to the tray.
+function containDice(world:CANNON.World){
+ const compact=compactWorlds.has(world),halfX=compact?3:6.3,halfZ=compact?2.5:4.35;
+ for(const b of world.bodies){
+  if(b.type!==CANNON.Body.DYNAMIC||!(b.shapes[0] instanceof CANNON.Box))continue;
+  const radius=b.shapes[0].boundingSphereRadius;
+  let moved=false;
+  for(const [axis,limit] of [['x',halfX-.175-radius],['z',halfZ-.175-radius]] as const){
+   if(Math.abs(b.position[axis])>limit){
+    const sign=Math.sign(b.position[axis]);b.position[axis]=sign*limit;
+    if(b.velocity[axis]*sign>0)b.velocity[axis]*=-.16;
+    moved=true;
+   }
+  }
+  if(b.position.y<0){b.position.y=radius;b.velocity.y=Math.max(0,b.velocity.y);moved=true;}
+  if(moved){b.previousPosition.copy(b.position);b.interpolatedPosition.copy(b.position);b.aabbNeedsUpdate=true;b.wakeUp();}
+ }
+}
 export function createWorld(compact=false){const world=new CANNON.World({gravity:new CANNON.Vec3(0,-GRAVITY,0),allowSleep:true});(world.solver as CANNON.GSSolver).iterations=20;if(compact)compactWorlds.add(world);
  world.addContactMaterial(new CANNON.ContactMaterial(woodMaterial,boneMaterial,{friction:.4,restitution:.16,contactEquationStiffness:1e7,contactEquationRelaxation:4}));
  world.addContactMaterial(new CANNON.ContactMaterial(boneMaterial,boneMaterial,{friction:0,restitution:.12,contactEquationStiffness:1e7,contactEquationRelaxation:4}));
  const halfX=compact?3:6.3,halfZ=compact?2.5:4.35;
  for(const [w,h,d,x,y,z] of [[13,.45,9,0,-.225,0],[.35,10,9,-halfX,5,0],[.35,10,9,halfX,5,0],[13,10,.35,0,5,halfZ],[13,10,.35,0,5,-halfZ]]){const b=new CANNON.Body({mass:0,material:woodMaterial,shape:new CANNON.Box(new CANNON.Vec3(w/2,h/2,d/2))});b.position.set(x,y,z);world.addBody(b);}
+ trayWalls.set(world,world.bodies.slice(1,5));
+ world.addEventListener('postStep',()=>containDice(world));
  // A modest first-impact loss retains a natural bounce and tumble on wood.
  world.addEventListener('postStep',()=>{for(const contact of world.contacts){
   const die=awaitingLanding.has(contact.bi)?contact.bi:awaitingLanding.has(contact.bj)?contact.bj:null;
@@ -46,6 +76,7 @@ export function createWorld(compact=false){const world=new CANNON.World({gravity
 }
 export function createDie(world:CANNON.World,scale=1){const b=new CANNON.Body({mass:2.8,material:boneMaterial,shape:diceShape(scale),linearDamping:.16,angularDamping:.24,allowSleep:true,sleepSpeedLimit:.10,sleepTimeLimit:.5});world.addBody(b);return b;}
 export function launchDie(b:CANNON.Body,j:number,random:()=>number=secureRandom,compact=false){
+ compact=b.world?compactWorlds.has(b.world):compact;
  setShellRotation(b,uniformInt(24));
  recoveryAttempts.delete(b);b.type=CANNON.Body.DYNAMIC;b.updateMassProperties();b.wakeUp();
  const row=Math.floor(j/3),lane=j%3-1;

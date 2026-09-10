@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import * as CANNON from 'cannon-es';
-import {createWorld,createDie,launchDie,nudgeTilted,upperFace,normals,faceValues,PHYSICS_STEP} from '../lib/physics.ts';
+import {createWorld,setWorldCompact,createDie,launchDie,nudgeTilted,upperFace,normals,faceValues,PHYSICS_STEP} from '../lib/physics.ts';
 test('top-face detection agrees with all six rendered materials',()=>{normals.forEach((n,i)=>{const q=new CANNON.Quaternion();q.setFromVectors(n,new CANNON.Vec3(0,1,0));assert.equal(upperFace(q).value,faceValues[i]);assert.ok(upperFace(q).alignment>.999);});});
 test('100 seeded six-die throws settle on flat faces within tray',()=>{let seed=7193;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/2**32;};let longest=0;
  for(let run=0;run<100;run++){const world=createWorld();const dice=Array.from({length:6},()=>createDie(world));dice.forEach((b,i)=>launchDie(b,i,random));let settled=false;
@@ -81,4 +81,19 @@ test('dice recover from edge and corner rests at both display sizes',()=>{
   for(let step=0;step<1800;step++){world.step(PHYSICS_STEP);if(step%90===0)nudgeTilted(die);if(step>80&&die.sleepState===CANNON.Body.SLEEPING&&upperFace(die.quaternion).alignment>.985&&die.position.y<.65){settled=true;break;}}
   assert.ok(settled,`edge rest at scale ${scale}, tilt ${x}/${z}`);
  }
+});
+
+
+test('viewport changes and missed contacts never lose a die below or outside the tray',()=>{
+ const world=createWorld(),die=createDie(world);
+ launchDie(die,0,()=>.5);
+ setWorldCompact(world,true);
+ die.position.set(8,-2,9);die.velocity.set(20,-30,20);
+ const orientation=die.quaternion.clone();
+ die.angularVelocity.setZero();world.step(PHYSICS_STEP);
+ assert.ok(Math.abs(die.position.x)<3&&Math.abs(die.position.z)<2.5&&die.position.y>0);
+ assert.deepEqual(die.quaternion,orientation);
+ // Even a stale caller's display flag must not launch outside the actual tray.
+ launchDie(die,0,()=>.5,false);assert.equal(die.position.z,1.75);
+ setWorldCompact(world,false);launchDie(die,0,()=>.5,true);assert.equal(die.position.z,3.5);
 });
