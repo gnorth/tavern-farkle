@@ -77,11 +77,12 @@ outgoingLight = mix(vec3(tableLightness), outgoingLight, 0.45) * 0.22;
    camera.up.set(portrait?1:0,0,portrait?0:-1);
    let vertical:number;
    if(phone.matches){
-    const screen=host.parentElement!,bounds=host.getBoundingClientRect();
-    const cards=Array.from(screen.querySelectorAll('.score-note'));
-    const top=Math.max(0,...cards.map(card=>card.getBoundingClientRect().bottom-bounds.top))+28;
-    const controls=screen.querySelector('.turn-controls')?.getBoundingClientRect();
-    const bottom=controls&&controls.height>0?h-(controls.top-bounds.top)+18:120;
+    const styles=getComputedStyle(host.parentElement!);
+    const safeTop=parseFloat(styles.getPropertyValue('--safe-top'))||8;
+    const safeBottom=parseFloat(styles.getPropertyValue('--safe-bottom'))||14;
+    // Reserve the largest control state; selection must never change camera zoom.
+    const top=safeTop+(portrait?143:137);
+    const bottom=safeBottom+(portrait?190:138);
     const available=Math.max(80,h-top-bottom);
     // Fit the complete dice arena (including held dice and selection rings)
     // into the free screen rectangle, while retaining a full-screen table.
@@ -94,7 +95,7 @@ outgoingLight = mix(vec3(tableLightness), outgoingLight, 0.45) * 0.22;
    parkedIndices.forEach((i,slot)=>{const to=parkedPosition(slot,parkedIndices.length);bodies[i].position.set(to.x,to.y,to.z);syncBody(bodies[i]);const transfer=transfers.find(t=>t.index===i);if(transfer)transfer.to.copy(to);});
   };
   const observer=new ResizeObserver(resize);observer.observe(host);
-  host.parentElement?.querySelectorAll('.turn-controls,.score-note').forEach(el=>observer.observe(el));resize();
+  resize();
   const ray=new THREE.Raycaster();const pointer=new THREE.Vector2();const click=(e:PointerEvent)=>{if(!latest.current.interactive||rolling)return;const rect=renderer.domElement.getBoundingClientRect();pointer.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);ray.setFromCamera(pointer,camera);const hit=ray.intersectObjects(meshes)[0];if(hit)latest.current.onSelect(hit.object.userData.index);};renderer.domElement.addEventListener('pointerup',click);
   let raf=0,last=performance.now();function frame(now:number){const dt=Math.min((now-last)/1000,.05);last=now;if(pendingLaunch&&now>=pendingLaunch.at){const next=pendingLaunch;pendingLaunch=null;transfers=[];beginThrow(next.ids,next.id);}world.step(PHYSICS_STEP,dt,8);bodies.forEach((b,i)=>{meshes[i].position.copy(b.interpolatedPosition as unknown as THREE.Vector3);meshes[i].quaternion.copy(visibleQuaternion(b,true) as unknown as THREE.Quaternion);const transfer=transfers.find(t=>t.index===i);if(transfer){const t=transfer.duration?Math.min(1,Math.max(0,(now-transfer.start)/transfer.duration)):1;const eased=t*t*(3-2*t);meshes[i].position.lerpVectors(transfer.from,transfer.to,eased);meshes[i].position.y+=Math.sin(Math.PI*t)*.22;meshes[i].quaternion.slerpQuaternions(transfer.fromQ,transfer.toQ,eased);}if(clearAt!==null){const t=reducedMotion?1:Math.min(1,Math.max(0,(now-clearAt-200-i*35)/450));meshes[i].material.forEach(m=>m.opacity=1-t);meshes[i].scale.setScalar(1-t*.15);meshes[i].castShadow=t===0;meshes[i].visible=t<1;rings[i].visible=false;}rings[i].position.set(meshes[i].position.x,.06,meshes[i].position.z);const el=buttons.current[i];if(el){el.style.visibility=meshes[i].visible?'visible':'hidden';const p=meshes[i].position.clone().project(camera);el.style.left=`${(p.x*.5+.5)*host.clientWidth}px`;el.style.top=`${(-p.y*.5+.5)*host.clientHeight}px`;const size=Math.max(44,host.clientWidth/(camera.right-camera.left)*1.4);el.style.width=el.style.height=`${size}px`;}});
    if(rolling&&now-start>650){const stable=active.every(i=>bodies[i].sleepState===CANNON.Body.SLEEPING);const flat=active.every(i=>upperFace(bodies[i].quaternion).alignment>.985&&bodies[i].position.y<.65);
