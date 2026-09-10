@@ -158,3 +158,17 @@
 .selection-hint-label{color:#d5c4a4;font-size:13px;letter-spacing:.025em}
 .selection-hint strong{color:#ffe2a0}
 .selection-hint-parts{color:#eadcc3}
+
+@media (hover:none) and (pointer:coarse), (max-width:900px) and (orientation:portrait), (max-height:520px) and (orientation:landscape){
+ .score-note{grid-template-rows:30px 34px 23px;height:115px;min-width:0}
+ .score-note .total-line{min-width:0;gap:6px;align-items:center}
+ .score-note .total-line>span{flex:1 1 0;min-width:0;white-space:normal;font-size:12px;line-height:1.15}
+ .score-note .score-target{display:block;white-space:nowrap}
+ .score-note .total-line strong{flex:0 0 auto;font-size:clamp(22px,6.2vw,28px);letter-spacing:-.035em}
+ .score-note dl{min-width:0;gap:4px}.score-note dl>div{min-width:0;gap:3px}.score-note dt{font-size:12px;white-space:nowrap}.score-note dd{font-size:16px}
+ .game-status{top:calc(var(--safe-top,8px) + 123px)}
+}
+@media (max-height:520px) and (orientation:landscape), (hover:none) and (pointer:coarse) and (orientation:landscape){
+ .score-note{grid-template-rows:28px 32px 23px;height:109px}
+ .game-status{top:var(--safe-top,8px)}
+}
