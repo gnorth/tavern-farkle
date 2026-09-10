@@ -184,3 +184,6 @@
 
 /* A soft ink wash reads as an annotation, without a button border. */
 .selection-hint,.turn-controls .selection-hint{background:linear-gradient(90deg,#170f09e8,#1d140cdb 82%,#1d140c99);padding:9px 12px;border:0;border-radius:2px;box-shadow:none}
+
+.score-note::after{opacity:.58;mix-blend-mode:multiply;background-size:170px 170px}
+.game-dialog{background-size:200px 200px!important}
