@@ -51,7 +51,13 @@ export function diceShape(scale=1){
   const u=n.cross(Math.abs(n.x)<.9?new CANNON.Vec3(1,0,0):new CANNON.Vec3(0,1,0)).unit(),v=n.cross(u);
   return [...ids].sort((i,j)=>{const p=vertices[i].vsub(center),q=vertices[j].vsub(center);return Math.atan2(p.dot(v),p.dot(u))-Math.atan2(q.dot(v),q.dot(u));});
  });
- return new CANNON.ConvexPolyhedron({vertices:vertices.map(v=>v.scale(scale)),faces});
+ const shape=new CANNON.ConvexPolyhedron({vertices:vertices.map(v=>v.scale(scale)),faces});
+ // SAT axes are undirected: testing both n and -n repeats the same work.
+ // Keep every distinct axis, preserving the exact collision surface.
+ const undirected=(vectors:CANNON.Vec3[])=>vectors.filter((v,i)=>!vectors.slice(0,i).some(other=>Math.abs(v.dot(other))>1-1e-10));
+ shape.uniqueAxes=undirected(shape.faceNormals);
+ shape.uniqueEdges=undirected(shape.uniqueEdges);
+ return shape;
 }
 const compactWorlds=new WeakSet<CANNON.World>();
 export function createWorld(compact=false){const world=new CANNON.World({gravity:new CANNON.Vec3(0,-60,0),allowSleep:true});(world.solver as CANNON.GSSolver).iterations=20;if(compact)compactWorlds.add(world);
