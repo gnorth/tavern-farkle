@@ -38,3 +38,10 @@ next-env.d.ts
 /work/
 
 *.tsbuildinfo
+
+# Android generated output
+/android/.gradle/
+/android/**/build/
+/android/app/src/main/assets/
+/android/local.properties
+*.apk

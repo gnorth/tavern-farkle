@@ -1,0 +1,46 @@
+name: Android APK
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['android/**', 'mobile/**', 'app/**', 'components/**', 'lib/**', 'public/**', 'package*.json', '.github/workflows/android.yml']
+permissions:
+  contents: write
+concurrency:
+  group: android-apk
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build:android-web
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Build installable test APK
+        run: gradle -p android assembleDebug --no-daemon
+      - run: cp android/app/build/outputs/apk/debug/app-debug.apk tavern-farkle.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tavern-farkle-apk
+          path: tavern-farkle.apk
+          retention-days: 90
+      - name: Publish APK download
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view android-latest >/dev/null 2>&1; then
+            gh release create android-latest --target "$GITHUB_SHA" --title "Android APK — тестова версія" --notes "Корчма — Farkle. Офлайн-гра для Android 8.0+. Завантажте tavern-farkle.apk. Це тестова debug-збірка; для Google Play потрібен окремий релізний підпис." --prerelease
+          fi
+          gh release upload android-latest tavern-farkle.apk --clobber
