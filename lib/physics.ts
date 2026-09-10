@@ -33,7 +33,7 @@ const awaitingLanding=new WeakSet<CANNON.Body>();
 export function diceShape(scale=1){
  const core=.475-DICE_RADIUS,points:Vector3[]=[];
  for(const sx of [-1,1])for(const sy of [-1,1])for(const sz of [-1,1]){
-  for(let x=0;x<=2;x++)for(let y=0;y<=2;y++)for(let z=0;z<=2;z++){
+  for(let x=0;x<=1;x++)for(let y=0;y<=1;y++)for(let z=0;z<=1;z++){
    if(!x&&!y&&!z)continue;
    const n=new Vector3(x*sx,y*sy,z*sz).normalize();
    points.push(n.multiplyScalar(DICE_RADIUS).add(new Vector3(sx*core,sy*core,sz*core)));
@@ -51,13 +51,7 @@ export function diceShape(scale=1){
   const u=n.cross(Math.abs(n.x)<.9?new CANNON.Vec3(1,0,0):new CANNON.Vec3(0,1,0)).unit(),v=n.cross(u);
   return [...ids].sort((i,j)=>{const p=vertices[i].vsub(center),q=vertices[j].vsub(center);return Math.atan2(p.dot(v),p.dot(u))-Math.atan2(q.dot(v),q.dot(u));});
  });
- const shape=new CANNON.ConvexPolyhedron({vertices:vertices.map(v=>v.scale(scale)),faces});
- // SAT axes are undirected: testing both n and -n repeats the same work.
- // Keep every distinct axis, preserving the exact collision surface.
- const undirected=(vectors:CANNON.Vec3[])=>vectors.filter((v,i)=>!vectors.slice(0,i).some(other=>Math.abs(v.dot(other))>1-1e-10));
- shape.uniqueAxes=undirected(shape.faceNormals);
- shape.uniqueEdges=undirected(shape.uniqueEdges);
- return shape;
+ return new CANNON.ConvexPolyhedron({vertices:vertices.map(v=>v.scale(scale)),faces});
 }
 const compactWorlds=new WeakSet<CANNON.World>();
 export function createWorld(compact=false){const world=new CANNON.World({gravity:new CANNON.Vec3(0,-60,0),allowSleep:true});(world.solver as CANNON.GSSolver).iterations=20;if(compact)compactWorlds.add(world);
