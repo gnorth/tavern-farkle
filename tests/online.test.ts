@@ -12,3 +12,13 @@ test('only the waiting host can change the target',()=>{const r=room();r.names=[
 test('selection and banking are validated atomically',()=>{const r=room();r.game.phase='choose';r.game.dice=[1,2,3,4,5,6];const next=roomAction(r,0,{type:'bank',ids:[0,4]});assert.equal(next.game.scores[0],150);assert.throws(()=>roomAction(r,0,{type:'bank',ids:[1]}));assert.throws(()=>roomAction(r,0,{type:'bank',ids:[0,0]}));});
 test('rematch target changes reset consent and leave the final scores intact',()=>{const r=room();r.game.phase='won';r.game.scores=[4100,3000];const agreed=roomAction(r,0,{type:'rematch'});const changed=roomAction(agreed,1,{type:'rematch-target',target:6000});assert.deepEqual(changed.rematch,[]);assert.deepEqual(changed.game.scores,[4100,3000]);assert.equal(changed.game.target,4000);const first=roomAction(changed,0,{type:'rematch'});assert.equal(first.game.phase,'won');const second=roomAction(first,1,{type:'rematch'});assert.equal(second.game.target,6000);assert.deepEqual(second.game.scores,[0,0]);assert.equal(second.rematchTarget,undefined);});
 test('rematch target only accepts supported values after victory',()=>{const r=room();assert.throws(()=>roomAction(r,0,{type:'rematch-target',target:6000}));r.game.phase='won';assert.throws(()=>roomAction(r,0,{type:'rematch-target',target:5000}));});
+test('shared selection can be changed and cleared without banking or rerolling',()=>{
+ const r=room();r.game.phase='choose';r.game.dice=[1,2,3,4,5,6];r.game.locked=[5];
+ const chosen=roomAction(r,0,{type:'select',ids:[0,4]});
+ assert.deepEqual(chosen.game.selected,[0,4]);
+ assert.deepEqual(chosen.game.dice,r.game.dice);assert.deepEqual(chosen.game.scores,[0,0]);assert.equal(chosen.game.pot,0);assert.equal(chosen.game.rollId,r.game.rollId);
+ assert.throws(()=>roomAction(chosen,1,{type:'select',ids:[0]}));
+ assert.throws(()=>roomAction(chosen,0,{type:'select',ids:[5]}));
+ const cleared=roomAction(chosen,0,{type:'select',ids:[]});assert.deepEqual(cleared.game.selected,[]);
+ const banked=roomAction(cleared,0,{type:'bank',ids:[0,4]});assert.equal(banked.game.scores[0],150);
+});

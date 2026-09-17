@@ -8,6 +8,7 @@ type Reply=Snapshot & {error?:string;id?:string;token?:string;host:string;target
 type Snapshot={game:Game;names:string[];revision:number;seat:number;online:boolean[];rematch:number[];rematchTarget?:number};
 export default function OnlinePage(){
  const [localSelected,setLocalSelected]=useState<number[]>([]);
+ const selectionValue=useRef<number[]>([]),selectionPending=useRef<{ids:number[];rollId:number;player:number}|null>(null),selectionFlight=useRef<Promise<void>|null>(null),actionPending=useRef(false);
  const [initialized,setInitialized]=useState(false);
  const [room,setRoom]=useState(''),[token,setToken]=useState(''),[snap,setSnap]=useState<Snapshot|null>(null),[invite,setInvite]=useState<{host:string;target:number;joinable:boolean}|null>(null);
  const [name,setName]=useState(''),[target,setTarget]=useState(4000),[error,setError]=useState(''),[busy,setBusy]=useState(false),[connected,setConnected]=useState(false),[copied,setCopied]=useState(false),[rules,setRules]=useState(false);
@@ -17,11 +18,37 @@ export default function OnlinePage(){
  useEffect(()=>{if(!room)return;let cancelled=false,timer:ReturnType<typeof setTimeout>;const controller=new AbortController();
  async function poll(){try{const res=await fetch(`/api/rooms?id=${encodeURIComponent(room)}`,{headers:token?{Authorization:`Bearer ${token}`}:{},signal:controller.signal});const data=await res.json() as Reply;if(cancelled)return;if(!res.ok)throw new Error(data.error);if(data.game){accept(data);setError('');}else setInvite(data);setConnected(true);}catch(e){if(!cancelled){setConnected(false);setError((e as Error).message);}}finally{if(!cancelled)timer=setTimeout(poll,500);}}
  poll();return()=>{cancelled=true;controller.abort();clearTimeout(timer);};},[room,token]);
- async function send(type:string,ids?:number[],newTarget?:number){if(busy)return;setBusy(true);setError('');try{
+ async function send(type:string,ids?:number[],newTarget?:number){if(actionPending.current)return;actionPending.current=true;setBusy(true);setError('');selectionPending.current=null;try{
+ await selectionFlight.current;
  const res=await fetch('/api/rooms',{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:`Bearer ${token}`}:{})},body:JSON.stringify({type,id:room,name,target:newTarget??target,revision:current.current?.revision,ids})});const v=await res.json() as Reply;if(!res.ok)throw new Error(v.error);
  if(v.token){const id=v.id||room;localStorage.setItem(`farkle-room-${id}`,v.token);localStorage.setItem('farkle-name',name.trim());setToken(v.token);setRoom(id);history.replaceState(null,'',`/online?room=${id}`);}accept(v);
- }catch(e){setError((e as Error).message);}finally{setBusy(false);}}
- useEffect(()=>setLocalSelected([]),[snap?.game.rollId,snap?.game.player,snap?.game.phase]);
+ }catch(e){setError((e as Error).message);}finally{actionPending.current=false;setBusy(false);}}
+ // Only one selection request is in flight. Rapid clicks replace the queued selection.
+ function chooseDie(id:number){
+  const snapshot=current.current;
+  if(actionPending.current||!snapshot||snapshot.game.player!==snapshot.seat||snapshot.game.phase!=='choose')return;
+  const ids=selectionValue.current.includes(id)?selectionValue.current.filter(i=>i!==id):[...selectionValue.current,id];
+  selectionValue.current=ids;setLocalSelected(ids);
+  selectionPending.current={ids,rollId:snapshot.game.rollId,player:snapshot.game.player};
+  if(selectionFlight.current)return;
+  selectionFlight.current=(async()=>{
+   while(selectionPending.current){
+    const selection=selectionPending.current;selectionPending.current=null;
+    for(let attempt=0;attempt<2;attempt++){
+     const latest=current.current;
+     if(!latest||latest.game.phase!=='choose'||latest.game.rollId!==selection.rollId||latest.game.player!==selection.player)break;
+     const res=await fetch('/api/rooms',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},body:JSON.stringify({type:'select',id:room,revision:latest.revision,ids:selection.ids})});
+     const data=await res.json() as Reply;
+     if(res.ok){accept(data);break;}
+     if(res.status!==409)throw new Error(data.error);
+     const fresh=await fetch(`/api/rooms?id=${encodeURIComponent(room)}`,{headers:{Authorization:`Bearer ${token}`}});
+     const updated=await fresh.json() as Reply;
+     if(!fresh.ok)throw new Error(updated.error);accept(updated);
+    }
+   }
+  })().catch(e=>{setError((e as Error).message);}).finally(()=>{selectionFlight.current=null;});
+ }
+ useEffect(()=>{selectionValue.current=[];selectionPending.current=null;setLocalSelected([]);},[snap?.game.rollId,snap?.game.player,snap?.game.phase]);
  const g=snap?{...snap.game,selected:snap.game.player===snap.seat?localSelected:snap.game.selected}:undefined,joined=(snap?.names.length||0)===2;
  const mine=!!snap&&g?.player===snap.seat,canChoose=joined&&mine&&g?.phase==='choose'&&!busy&&connected;
  const selected=g?scoreDice(g.selected.map(i=>g.dice[i])):0;
@@ -45,11 +72,11 @@ export default function OnlinePage(){
  </form>}
  {error&&<p className="lobby-error" role="alert">{error}</p>}</section></main>;
  return <main className="game-screen online-table">
- <DiceTable game={g!} authoritative interactive={canChoose&&!rules} onResult={()=>{}} onSelect={id=>setLocalSelected(ids=>ids.includes(id)?ids.filter(i=>i!==id):[...ids,id])}/>
+ <DiceTable game={g!} authoritative interactive={canChoose&&!rules} onResult={()=>{}} onSelect={chooseDie}/>
  {[0,1].map(p=><section key={p} className={`score-note ${p===snap.seat?'near':'far'} ${g!.player===p?'active':''}`}><div className="score-identity"><span className="score-avatar player-emblem">{snap.names[p].slice(0,1).toUpperCase()}</span><div className="score-identity-text"><h2>{snap.names[p]}{p===snap.seat?' (ви)':''}</h2></div></div><div className="total-line"><span>Рахунок / <span className="score-target">{g!.target.toLocaleString('uk-UA')}</span></span><strong>{g!.scores[p].toLocaleString('uk-UA')}</strong></div><dl><div><dt>За хід</dt><dd>{g!.player===p?g!.pot:0}</dd></div><div><dt>{snap.online[p]?'У грі':'Поза мережею'}</dt></div></dl></section>)}
  <div className="game-status" role="status">{!connected?'Відновлюємо зв’язок…':g!.phase==='rolling'?'Кубики котяться…':g!.phase==='won'?`${snap.names[g!.winner!]} перемагає!`:mine?'Ваш хід':`Хід: ${snap.names[g!.player]}`}</div>
  {(g!.phase==='bust'||g!.phase==='handoff')&&<div className="bust-explanation" role="status"><h2>{g!.phase==='bust'?'Невдалий кидок':`+${g!.result?.earned} очок`}</h2><p>{g!.phase==='bust'?`Немає залікової комбінації. За хід втрачено ${g!.result?.lost||0} очок.`:`${snap.names[g!.player]} передає хід.`}</p></div>}
- <div className="turn-controls">{g!.phase==='won'&&<fieldset className="rematch-target"><legend>Ціль наступної партії</legend><div>{[4000,6000,8000].map(n=><button key={n} type="button" aria-pressed={(snap.rematchTarget??g!.target)===n} disabled={busy||!connected} onClick={()=>send('rematch-target',undefined,n)}>{n.toLocaleString('uk-UA')}</button>)}</div><small>Почнемо, коли обоє погодяться на ціль.</small></fieldset>}{error&&<div role="alert" className="selection-hint">{error}</div>}{selected>0&&g!.phase==='choose'&&<aside className="selection-hint"><div className="selection-hint-content"><strong>+{selected} <small>очок</small></strong><div className="selection-hint-parts">{selectionBreakdown(g!.selected.map(i=>g!.dice[i])).map(p=><div key={p.label}>{p.label}</div>)}</div></div></aside>}
+ <div className="turn-controls">{g!.phase==='won'&&<fieldset className="rematch-target"><legend>Ціль наступної партії</legend><div>{[4000,6000,8000].map(n=><button key={n} type="button" aria-pressed={(snap.rematchTarget??g!.target)===n} disabled={busy||!connected} onClick={()=>send('rematch-target',undefined,n)}>{n.toLocaleString('uk-UA')}</button>)}</div><small>Почнемо, коли обоє погодяться на ціль.</small></fieldset>}{error&&<div role="alert" className="selection-hint">{error}</div>}{selected>0&&g!.phase==='choose'&&<aside className="selection-hint">{!mine&&<span>Вибір суперника</span>}<div className="selection-hint-content"><strong>+{selected} <small>очок</small></strong><div className="selection-hint-parts">{selectionBreakdown(g!.selected.map(i=>g!.dice[i])).map(p=><div key={p.label}>{p.label}</div>)}</div></div></aside>}
  <nav className={`game-actions ${canChoose?'has-choice':''}`} aria-label="Дії гри"><button className="utility" onClick={()=>setRules(!rules)}>Правила</button>
  {g!.phase==='ready'&&mine&&<button className="main-action" disabled={busy||!connected} onClick={()=>send('roll',g!.phase==='choose'?localSelected:undefined)}>Кинути кубики</button>}
  {g!.phase==='choose'&&mine&&<><button disabled={!canChoose||!selected} onClick={()=>send('roll',g!.phase==='choose'?localSelected:undefined)}>Зарахувати й кинути</button><button className="main-action" disabled={!canChoose||!selected} onClick={()=>send('bank',localSelected)}>Забрати {g!.pot+selected}</button></>}
