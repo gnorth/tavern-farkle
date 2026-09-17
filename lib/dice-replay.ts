@@ -15,3 +15,10 @@ export function diceReplay(values:number[],seed:number,scale=1){
  for(const frame of frames)frame.forEach((pose,i)=>{pose.q=pose.q.mult(shells[i]);});
  return frames;
 }
+
+// A RAF timestamp can precede start when a delayed throw starts inside that frame.
+export function replayCursor(length:number,now:number,start:number,duration=1800){
+ const progress=Math.max(0,Math.min(1,(now-start)/duration));
+ const index=progress*(length-1),a=Math.floor(index);
+ return {progress,a,b:Math.min(a+1,length-1),alpha:index-a};
+}
